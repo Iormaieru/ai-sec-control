@@ -94,3 +94,55 @@ dependencias.
   responder, comparar el score mostrado contra el mismo caso calculado a mano en el Excel de
   referencia (criterio de demo del Incremento 1 en `docs/SPEC.md`).
   Depende de: T9, T10, T12.
+
+---
+
+# Incremento 2 — Capa LLM + análisis de documentos — Plan de tareas
+
+Decisión de diseño confirmada con el usuario: se **unifica** el análisis de IA de Módulo 1
+(candidatos) y la segunda mitad de Módulo 2 (ingresados/terceros) en un solo flujo — subir un
+documento, la IA clasifica la solución y recomienda qué preguntas del catálogo de 138 aplican,
+con instrucciones de cómo responder cada una en ES/EN. El catálogo PLOT4AI ya incorpora OWASP (21
+preguntas) y MITRE ATLAS (13 preguntas) como referencias, así que no se pierde cobertura al no
+generar preguntas ad-hoc fuera del catálogo. Proveedor default: **OpenAI**, con la interfaz
+agnóstica de todos modos (`LLMProvider` ABC).
+
+- [ ] **T14 — Parsing de documentos (PDF/DOCX → texto)**
+  `documents/parsing.py::extract_text(contenido: bytes, content_type: str) -> str` usando pypdf
+  y python-docx. Aceptación: tests con un PDF y un DOCX de prueba, texto no vacío extraído;
+  content-type no soportado -> error claro.
+
+- [ ] **T15 — Capa LLM: interfaz + MockProvider**
+  `llm/base.py` (`LLMProvider` ABC, un solo método `analyze_document(texto, catalogo) ->
+  DocumentAnalysisResult` con `clasificacion` + lista de preguntas recomendadas con
+  `instrucciones_es/en`), `llm/schemas.py` (pydantic), `llm/factory.py` (`get_llm_provider()`
+  según `settings.llm_provider`), `llm/providers/mock_provider.py` (determinístico, sin red, para
+  tests). Aceptación: tests del factory y del mock provider.
+
+- [ ] **T16 — Adapter OpenAI**
+  `llm/providers/openai_provider.py`: llamada a la API de OpenAI con structured output (JSON
+  schema) para garantizar una respuesta parseable. Aceptación: tests con el cliente de OpenAI
+  mockeado (sin red en CI) verificando el mapeo request/response; un test adicional que hace una
+  llamada real, marcado `skipif` no hay `AISEC_OPENAI_API_KEY` configurada.
+
+- [ ] **T17 — Persistencia + endpoint de análisis**
+  `documents/models.py::CasoDocumento` (caso_id, nombre_archivo, texto_extraido, clasificacion) +
+  migración. `CasoRespuesta` suma `instrucciones_respuesta_es/en` + migración. Servicio que
+  extrae texto -> llama al LLMProvider -> crea CasoPregunta para las preguntas recomendadas que
+  no estaban ya en alcance -> guarda instrucciones en su CasoRespuesta -> persiste CasoDocumento.
+  Endpoint `POST /casos/{id}/documentos` (multipart). Aceptación: test de integración con el
+  MockProvider inyectado, verificando que las preguntas recomendadas aparecen en
+  `GET /casos/{id}/preguntas` con sus instrucciones.
+
+- [ ] **T18 — Export a Word**
+  `documents/export_docx.py` con python-docx: informe bilingüe por caso (clasificación +
+  preguntas seleccionadas con texto/instrucciones/explicación del control en ES/EN). Endpoint
+  `GET /casos/{id}/export/docx`. Aceptación: test que genera el .docx y verifica que el archivo
+  resultante es un docx válido con el contenido esperado (abrirlo con python-docx y leer texto).
+
+- [ ] **T19 — Frontend: subir documento + descargar informe**
+  En `CasoPreguntasPage` (o el detalle del caso): input de archivo "Analizar documento con IA",
+  muestra la clasificación devuelta y refresca la grilla (ahora con instrucciones visibles al
+  expandir una pregunta), botón "Descargar informe Word". Aceptación: build limpio + verificación
+  manual de las llamadas HTTP contra el backend real (mismo método que T11-T13, no hay navegador
+  headless en este entorno).
