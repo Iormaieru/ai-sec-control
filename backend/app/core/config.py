@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     def cors_allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
+    # "mock" por default: un ambiente nuevo sin API key configurada no debe
+    # romper al arrancar. Se pisa con AISEC_LLM_PROVIDER=openai (o el que
+    # corresponda) una vez que hay una key real.
+    llm_provider: str = "mock"
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+
 
 @lru_cache
 def get_settings() -> Settings:

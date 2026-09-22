@@ -112,7 +112,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   y python-docx. Aceptación: tests con un PDF y un DOCX de prueba, texto no vacío extraído;
   content-type no soportado -> error claro.
 
-- [ ] **T15 — Capa LLM: interfaz + MockProvider**
+- [x] **T15 — Capa LLM: interfaz + MockProvider**
   `llm/base.py` (`LLMProvider` ABC, un solo método `analyze_document(texto, catalogo) ->
   DocumentAnalysisResult` con `clasificacion` + lista de preguntas recomendadas con
   `instrucciones_es/en`), `llm/schemas.py` (pydantic), `llm/factory.py` (`get_llm_provider()`
