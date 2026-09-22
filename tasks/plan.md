@@ -16,7 +16,7 @@ dependencias.
   Aceptación: test que crea/edita una entidad de prueba y verifica que se completan los campos de
   auditoría y se emite una fila en `AuditLog`.
 
-- [ ] **T3 — Auth (JWT local, roles admin/user)**
+- [x] **T3 — Auth (JWT local, roles admin/user)**
   Modelo `User`, hashing de contraseña, emisión/verificación de JWT, dependencias
   `get_current_user`/`require_role`. Endpoints `POST /auth/login`, `POST /auth/register`
   (solo admin), `GET /auth/me`.
