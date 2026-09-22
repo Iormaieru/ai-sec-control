@@ -134,7 +134,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   MockProvider inyectado, verificando que las preguntas recomendadas aparecen en
   `GET /casos/{id}/preguntas` con sus instrucciones.
 
-- [ ] **T18 — Export a Word**
+- [x] **T18 — Export a Word**
   `documents/export_docx.py` con python-docx: informe bilingüe por caso (clasificación +
   preguntas seleccionadas con texto/instrucciones/explicación del control en ES/EN). Endpoint
   `GET /casos/{id}/export/docx`. Aceptación: test que genera el .docx y verifica que el archivo
