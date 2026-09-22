@@ -30,7 +30,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  if (options.body && !(options.body instanceof URLSearchParams)) {
+  const skipJsonHeader = options.body instanceof URLSearchParams || options.body instanceof FormData;
+  if (options.body && !skipJsonHeader) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -63,4 +64,17 @@ export const api = {
     request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   postForm: <T>(path: string, form: URLSearchParams) => request<T>(path, { method: "POST", body: form }),
+  postFile: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
 };
+
+export async function fetchBlob(path: string): Promise<Blob> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) {
+    throw new ApiError(response.status, "No se pudo descargar el archivo");
+  }
+  return response.blob();
+}

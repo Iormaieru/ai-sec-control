@@ -3,6 +3,7 @@ import io
 import pytest
 from docx import Document
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.documents.parsing import DOCX_CONTENT_TYPE
 
@@ -124,3 +125,62 @@ def test_analizar_documento_requiere_auth(client: TestClient, catalog_loaded: No
         files={"file": ("doc.docx", b"x", DOCX_CONTENT_TYPE)},
     )
     assert response.status_code == 401
+
+
+def test_hallucinated_or_malformed_pregunta_ids_are_dropped_not_crashed(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    catalog_loaded: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regresión: un LLM real (no el mock) devolvió alguna vez un
+    pregunta_id que no existe en el catálogo (UUID mal transcripto o
+    inventado), lo que rompía el insert con un IntegrityError -> 500. Debe
+    descartarse esa recomendación puntual, no tirar abajo todo el análisis."""
+    import uuid as uuid_mod
+
+    from app.catalog.models import Pregunta
+    from app.llm.base import LLMProvider
+    from app.llm.schemas import DocumentAnalysisResult, RecommendedQuestion
+
+    pregunta_real = db.query(Pregunta).first()
+
+    class HallucinatingProvider(LLMProvider):
+        def analyze_document(self, document_text, catalog):
+            return DocumentAnalysisResult(
+                clasificacion="Clasificación de prueba",
+                preguntas_recomendadas=[
+                    RecommendedQuestion(
+                        pregunta_id=str(pregunta_real.id),
+                        instrucciones_es="Instrucción real",
+                        instrucciones_en="Real instruction",
+                    ),
+                    RecommendedQuestion(
+                        pregunta_id=str(uuid_mod.uuid4()),  # no existe en preguntas
+                        instrucciones_es="Alucinada",
+                        instrucciones_en="Hallucinated",
+                    ),
+                    RecommendedQuestion(
+                        pregunta_id="no-es-un-uuid",  # malformado
+                        instrucciones_es="Malformada",
+                        instrucciones_en="Malformed",
+                    ),
+                ],
+            )
+
+    monkeypatch.setattr("app.documents.service.get_llm_provider", lambda: HallucinatingProvider())
+
+    caso = _create_caso(client, auth_headers)
+    contenido = _docx_bytes("texto cualquiera")
+
+    response = client.post(
+        f"/casos/{caso['id']}/documentos",
+        files={"file": ("doc.docx", contenido, DOCX_CONTENT_TYPE)},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert len(body["preguntas_recomendadas"]) == 1
+    assert body["preguntas_recomendadas"][0]["pregunta_id"] == str(pregunta_real.id)

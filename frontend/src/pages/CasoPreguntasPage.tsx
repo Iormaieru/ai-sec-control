@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCaso } from "../api/casos";
 import { ApiError } from "../api/client";
+import { analyzeDocument, downloadExportDocx } from "../api/documents";
 import {
   actualizarRespuesta,
   getCasoScore,
@@ -9,7 +10,14 @@ import {
   listDominios,
   seleccionarDominioCompleto,
 } from "../api/threatModel";
-import type { Caso, CasoPregunta, CasoScore, Dominio, RespuestaValor } from "../api/types";
+import type {
+  Caso,
+  CasoPregunta,
+  CasoScore,
+  DocumentoAnalizado,
+  Dominio,
+  RespuestaValor,
+} from "../api/types";
 import {
   ESTADO_LABELS,
   RESPUESTA_LABELS,
@@ -136,8 +144,18 @@ export function CasoPreguntasPage() {
       >
         <i className="bi bi-arrow-left" /> Volver al caso
       </Link>
-      <h1 className="h3 mb-3">Modelado de amenazas — {caso.nombre_proyecto}</h1>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h1 className="h3 mb-0">Modelado de amenazas — {caso.nombre_proyecto}</h1>
+        <button
+          className="btn btn-outline-primary"
+          onClick={() => downloadExportDocx(caso.id, caso.nombre_proyecto.replace(/\s+/g, "_"))}
+        >
+          <i className="bi bi-file-earmark-word me-1" /> Descargar informe Word
+        </button>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
+
+      <DocumentAnalysisCard casoId={caso.id} onAnalyzed={refreshPreguntasYScore} />
 
       {score && <ScoreDashboard score={score} />}
 
@@ -180,6 +198,7 @@ export function CasoPreguntasPage() {
                   <th>Pts.</th>
                   <th>Riesgo Residual</th>
                   <th>Mitig. %</th>
+                  <th>IA</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,6 +233,14 @@ export function CasoPreguntasPage() {
                         className="form-control form-control-sm mitigacion-input"
                       />
                     </td>
+                    <td>
+                      {pregunta.instrucciones_respuesta_es && (
+                        <i
+                          className="bi bi-info-circle text-primary"
+                          title={`ES: ${pregunta.instrucciones_respuesta_es}\n\nEN: ${pregunta.instrucciones_respuesta_en ?? ""}`}
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -222,6 +249,68 @@ export function CasoPreguntasPage() {
         </div>
       ))}
     </>
+  );
+}
+
+function DocumentAnalysisCard({ casoId, onAnalyzed }: { casoId: string; onAnalyzed: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<DocumentoAnalizado | null>(null);
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setFile(event.target.files?.[0] ?? null);
+    setResult(null);
+    setError(null);
+  }
+
+  async function handleAnalyze() {
+    if (!file) return;
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const analisis = await analyzeDocument(casoId, file);
+      setResult(analisis);
+      await onAnalyzed();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "No se pudo analizar el documento");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  return (
+    <div className="card mb-4">
+      <div className="card-body">
+        <h2 className="h5">Analizar documento con IA</h2>
+        <p className="text-muted small">
+          Subí la arquitectura del proyecto o la documentación de la herramienta (PDF o Word). La IA
+          clasifica la solución y recomienda qué preguntas del catálogo aplican, con instrucciones de
+          cómo responder cada una.
+        </p>
+        <div className="d-flex gap-2 align-items-center flex-wrap">
+          <input
+            type="file"
+            className="form-control"
+            style={{ maxWidth: 360 }}
+            accept=".pdf,.docx"
+            onChange={handleFileChange}
+          />
+          <button className="btn btn-primary" onClick={handleAnalyze} disabled={!file || analyzing}>
+            {analyzing ? "Analizando…" : "Analizar"}
+          </button>
+        </div>
+        {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
+        {result && (
+          <div className="alert alert-success mt-3 mb-0">
+            <strong>Clasificación:</strong> {result.clasificacion}
+            <br />
+            <strong>{result.preguntas_recomendadas.length}</strong> pregunta(s) recomendada(s) agregada(s)
+            al alcance del caso.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

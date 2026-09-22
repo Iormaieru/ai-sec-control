@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -9,9 +10,11 @@ from app.documents.models import CasoDocumento
 from app.documents.parsing import extract_text
 from app.documents.schemas import DocumentoAnalizadoOut
 from app.llm.factory import get_llm_provider
-from app.llm.schemas import CatalogQuestionSummary
+from app.llm.schemas import CatalogQuestionSummary, RecommendedQuestion
 from app.threat_model.models import CasoPregunta, CasoRespuesta
 from app.threat_model.service import get_caso_pregunta_out
+
+logger = logging.getLogger(__name__)
 
 
 def _catalog_summaries(db: Session) -> list[CatalogQuestionSummary]:
@@ -28,6 +31,28 @@ def _catalog_summaries(db: Session) -> list[CatalogQuestionSummary]:
     ]
 
 
+def _validated_recommendations(
+    recomendadas: list[RecommendedQuestion], catalogo_ids: set[uuid.UUID]
+) -> list[tuple[uuid.UUID, RecommendedQuestion]]:
+    """El LLM recibe los pregunta_id como texto y a veces los transcribe mal
+    (son UUIDs largos) o directamente inventa uno — pasa incluso con
+    proveedores reales, no sólo en teoría. Se descarta silenciosamente
+    (con log) cualquier recomendación que no matchee una Pregunta real, en
+    vez de dejar que reviente el insert con un IntegrityError."""
+    validadas = []
+    for recomendada in recomendadas:
+        try:
+            pregunta_id = uuid.UUID(recomendada.pregunta_id)
+        except ValueError:
+            logger.warning("LLM devolvió un pregunta_id no-UUID: %r", recomendada.pregunta_id)
+            continue
+        if pregunta_id not in catalogo_ids:
+            logger.warning("LLM recomendó un pregunta_id que no existe en el catálogo: %s", pregunta_id)
+            continue
+        validadas.append((pregunta_id, recomendada))
+    return validadas
+
+
 def analyze_document(
     db: Session, caso: Caso, *, filename: str, content: bytes, content_type: str
 ) -> DocumentoAnalizadoOut:
@@ -36,8 +61,9 @@ def analyze_document(
     CasoPregunta para las preguntas que todavía no estaban en alcance y
     guarda las instrucciones de respuesta ES/EN en su CasoRespuesta."""
     texto = extract_text(content, content_type)
+    catalogo = _catalog_summaries(db)
 
-    resultado = get_llm_provider().analyze_document(texto, _catalog_summaries(db))
+    resultado = get_llm_provider().analyze_document(texto, catalogo)
 
     documento = CasoDocumento(
         caso_id=caso.id,
@@ -53,9 +79,9 @@ def analyze_document(
         for cp in db.scalars(select(CasoPregunta).where(CasoPregunta.caso_id == caso.id))
     }
 
+    catalogo_ids = {uuid.UUID(q.pregunta_id) for q in catalogo}
     pregunta_ids_recomendadas: list[uuid.UUID] = []
-    for recomendada in resultado.preguntas_recomendadas:
-        pregunta_id = uuid.UUID(recomendada.pregunta_id)
+    for pregunta_id, recomendada in _validated_recommendations(resultado.preguntas_recomendadas, catalogo_ids):
         pregunta_ids_recomendadas.append(pregunta_id)
 
         caso_pregunta = existentes.get(pregunta_id)

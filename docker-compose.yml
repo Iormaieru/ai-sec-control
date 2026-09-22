@@ -19,7 +19,12 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
+      # Pisa lo que traiga backend/.env para estas claves específicas: en
+      # Docker la DB se llama "db" (red interna), no localhost:5433.
       AISEC_DATABASE_URL: postgresql+psycopg://aisec:aisec@db:5432/aisec
       AISEC_JWT_SECRET: dev-secret-change-me
       AISEC_ENVIRONMENT: development

@@ -140,7 +140,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   `GET /casos/{id}/export/docx`. Aceptación: test que genera el .docx y verifica que el archivo
   resultante es un docx válido con el contenido esperado (abrirlo con python-docx y leer texto).
 
-- [ ] **T19 — Frontend: subir documento + descargar informe**
+- [x] **T19 — Frontend: subir documento + descargar informe**
   En `CasoPreguntasPage` (o el detalle del caso): input de archivo "Analizar documento con IA",
   muestra la clasificación devuelta y refresca la grilla (ahora con instrucciones visibles al
   expandir una pregunta), botón "Descargar informe Word". Aceptación: build limpio + verificación

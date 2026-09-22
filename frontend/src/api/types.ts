@@ -66,6 +66,8 @@ export interface CasoPregunta {
   fecha_objetivo: string | null;
   evidencia_esperada: string | null;
   observaciones: string | null;
+  instrucciones_respuesta_es: string | null;
+  instrucciones_respuesta_en: string | null;
 }
 
 export interface DomainScore {
@@ -97,6 +99,13 @@ export interface GlobalScore {
 export interface CasoScore {
   dominios: DomainScore[];
   global_score: GlobalScore;
+}
+
+export interface DocumentoAnalizado {
+  id: string;
+  nombre_archivo: string;
+  clasificacion: string;
+  preguntas_recomendadas: CasoPregunta[];
 }
 
 export interface Dominio {
