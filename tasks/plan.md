@@ -69,7 +69,7 @@ dependencias.
   con `scoring.py`, auditoría registrada en cada upsert de respuesta.
   Depende de: T5, T7, T8.
 
-- [ ] **T10 — Endpoint de score por caso**
+- [x] **T10 — Endpoint de score por caso**
   `GET /casos/{id}/score`: por dominio (compliance%, residual%, contribución, completitud,
   brechas críticas, semáforo) + global.
   Aceptación: test construyendo un caso multi-dominio con valores conocidos a mano y verificando

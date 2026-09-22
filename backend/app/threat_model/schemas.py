@@ -44,3 +44,34 @@ class CasoPreguntaOut(BaseModel):
     fecha_objetivo: date | None
     evidencia_esperada: str | None
     observaciones: str | None
+
+
+class DomainScoreOut(BaseModel):
+    dominio_codigo: str
+    dominio_nombre: str
+    peso: float
+    total_preguntas: int
+    respondidas: int
+    na_total: int
+    pendientes: int
+    cumple: int
+    brechas_criticas: int
+    compliance_pct: float
+    residual_pct: float
+    contrib_cumplimiento: float
+    contrib_residual: float
+    gap_ponderado: float
+    semaforo: str
+
+
+class GlobalScoreOut(BaseModel):
+    compliance_pct: float
+    residual_pct: float
+    completitud_pct: float
+    brechas_criticas: int
+    semaforo: str
+
+
+class CasoScoreOut(BaseModel):
+    dominios: list[DomainScoreOut]
+    global_score: GlobalScoreOut

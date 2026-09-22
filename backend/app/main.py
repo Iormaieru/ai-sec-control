@@ -4,6 +4,7 @@ from app.auth.router import router as auth_router
 from app.casos.router import router as casos_router
 from app.core.config import get_settings
 from app.threat_model.router import router as threat_model_router
+from app.threat_model.router import score_router as threat_model_score_router
 
 
 def create_app() -> FastAPI:
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(casos_router)
     app.include_router(threat_model_router)
+    app.include_router(threat_model_score_router)
 
     return app
 

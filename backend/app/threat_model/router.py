@@ -9,9 +9,22 @@ from app.casos.models import Caso
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.threat_model import service
-from app.threat_model.schemas import CasoPreguntaOut, RespuestaUpdate, SeleccionarPreguntasRequest
+from app.threat_model.schemas import (
+    CasoPreguntaOut,
+    CasoScoreOut,
+    RespuestaUpdate,
+    SeleccionarPreguntasRequest,
+)
 
 router = APIRouter(prefix="/casos/{caso_id}/preguntas", tags=["threat-model"])
+score_router = APIRouter(prefix="/casos/{caso_id}/score", tags=["threat-model"])
+
+
+@score_router.get("", response_model=CasoScoreOut)
+def get_score(
+    caso: Caso = Depends(get_caso_from_path), db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> CasoScoreOut:
+    return service.get_caso_score(db, caso)
 
 
 @router.post("", response_model=list[CasoPreguntaOut], status_code=status.HTTP_201_CREATED)

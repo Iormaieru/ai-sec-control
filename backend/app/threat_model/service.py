@@ -6,12 +6,15 @@ from sqlalchemy.orm import Session
 from app.casos.models import Caso
 from app.catalog.models import Dominio, Pregunta
 from app.threat_model.models import CasoPregunta, CasoRespuesta
-from app.threat_model.schemas import CasoPreguntaOut
+from app.threat_model.schemas import CasoPreguntaOut, CasoScoreOut, DomainScoreOut, GlobalScoreOut
 from app.threat_model.scoring import (
+    RespuestaInput,
     compute_estado,
     compute_maximo_aplicable,
     compute_pts_obtenidos,
     compute_riesgo_residual,
+    domain_aggregate,
+    global_score,
 )
 
 
@@ -113,3 +116,63 @@ def upsert_respuesta(db: Session, caso_pregunta: CasoPregunta, payload: dict) ->
 
     row = db.execute(_rows_query(caso_pregunta.caso_id).where(Pregunta.id == caso_pregunta.pregunta_id)).one()
     return _to_out(*row)
+
+
+def get_caso_score(db: Session, caso: Caso) -> CasoScoreOut:
+    """Score completo por dominio + global (GET /casos/{id}/score).
+
+    Recorre los 8 dominios del catálogo siempre, no sólo los que el caso
+    tocó: un dominio sin preguntas seleccionadas entra a domain_aggregate
+    con una lista vacía y aporta 0% a ese dominio (ver test de
+    independencia de subconjunto en T7) — así el global refleja que un
+    dominio entero sin evaluar no puede contar como "cumplido".
+    """
+    dominios = list(db.scalars(select(Dominio).order_by(Dominio.codigo)))
+
+    domain_scores = []
+    domain_scores_out = []
+    for dominio in dominios:
+        rows = db.execute(
+            select(CasoRespuesta, Pregunta)
+            .join(CasoPregunta, CasoRespuesta.caso_pregunta_id == CasoPregunta.id)
+            .join(Pregunta, CasoPregunta.pregunta_id == Pregunta.id)
+            .where(CasoPregunta.caso_id == caso.id, Pregunta.dominio_id == dominio.id)
+        ).all()
+
+        respuestas = [
+            RespuestaInput(cr.respuesta, pregunta.polaridad, pregunta.multiplicador, cr.factor_mitigacion_pct)
+            for cr, pregunta in rows
+        ]
+        score = domain_aggregate(respuestas, dominio.peso)
+        domain_scores.append(score)
+        domain_scores_out.append(
+            DomainScoreOut(
+                dominio_codigo=dominio.codigo,
+                dominio_nombre=dominio.nombre,
+                peso=float(dominio.peso),
+                total_preguntas=score.total_preguntas,
+                respondidas=score.respondidas,
+                na_total=score.na_total,
+                pendientes=score.pendientes,
+                cumple=score.cumple,
+                brechas_criticas=score.brechas_criticas,
+                compliance_pct=float(score.compliance_pct),
+                residual_pct=float(score.residual_pct),
+                contrib_cumplimiento=float(score.contrib_cumplimiento),
+                contrib_residual=float(score.contrib_residual),
+                gap_ponderado=float(score.gap_ponderado),
+                semaforo=score.semaforo,
+            )
+        )
+
+    total = global_score(domain_scores)
+    return CasoScoreOut(
+        dominios=domain_scores_out,
+        global_score=GlobalScoreOut(
+            compliance_pct=float(total.compliance_pct),
+            residual_pct=float(total.residual_pct),
+            completitud_pct=float(total.completitud_pct),
+            brechas_criticas=total.brechas_criticas,
+            semaforo=total.semaforo,
+        ),
+    )
