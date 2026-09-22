@@ -21,4 +21,6 @@ def db() -> Generator[Session, None, None]:
 def _reset_users_and_audit_log() -> Generator[None, None, None]:
     yield
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE TABLE users, audit_log RESTART IDENTITY CASCADE"))
+        conn.execute(
+            text("TRUNCATE TABLE users, audit_log, preguntas, dominios RESTART IDENTITY CASCADE")
+        )

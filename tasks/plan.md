@@ -24,7 +24,7 @@ dependencias.
   protegida rechaza sin token válido.
   Depende de: T1, T2.
 
-- [ ] **T4 — Modelos de catálogo (Dominio, Pregunta)**
+- [x] **T4 — Modelos de catálogo (Dominio, Pregunta)**
   Modelos + migración Alembic. Sin datos todavía (eso es T5).
   Aceptación: migración aplica limpio sobre la base de T1.
   Depende de: T1, T2.
