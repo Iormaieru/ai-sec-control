@@ -48,7 +48,7 @@ dependencias.
   incluyendo el caso crítico incorrecto = 0 puntos sin crédito parcial.
   Depende de: ninguna (módulo independiente, se puede paralelizar con T1-T5).
 
-- [ ] **T7 — Motor de scoring: agregación por dominio y global**
+- [x] **T7 — Motor de scoring: agregación por dominio y global**
   `domain_aggregate()` y `global_score()` sobre listas de respuestas.
   Aceptación: test golden transcribiendo un dominio completo del Excel (Transparency &
   Accessibility, 7 preguntas) contra los % ya calculados en la hoja `⚙️ Cálculos` (tolerancia
