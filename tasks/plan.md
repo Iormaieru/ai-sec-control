@@ -4,7 +4,7 @@ Fuente: `docs/SPEC.md`. Cada tarea se implementa con TDD (test primero), se corr
 completa + build, y se commitea individualmente antes de pasar a la siguiente. Orden = orden de
 dependencias.
 
-- [ ] **T1 — Scaffold backend + docker-compose**
+- [x] **T1 — Scaffold backend + docker-compose**
   FastAPI app factory (`backend/app/main.py`), config con pydantic-settings, sesión SQLAlchemy,
   Alembic inicializado, `docker-compose.yml` (postgres + backend), `requirements`/`pyproject`.
   Aceptación: `docker compose up` levanta Postgres + backend; `GET /health` devuelve 200;

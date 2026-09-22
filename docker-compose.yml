@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aisec
+      POSTGRES_PASSWORD: aisec
+      POSTGRES_DB: aisec
+    ports:
+      - "5433:5432"
+    volumes:
+      - aisec_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisec -d aisec"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      AISEC_DATABASE_URL: postgresql+psycopg://aisec:aisec@db:5432/aisec
+      AISEC_JWT_SECRET: dev-secret-change-me
+      AISEC_ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  aisec_db_data:
