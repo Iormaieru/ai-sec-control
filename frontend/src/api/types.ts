@@ -108,6 +108,23 @@ export interface DocumentoAnalizado {
   preguntas_recomendadas: CasoPregunta[];
 }
 
+export interface PreguntaCatalogo {
+  id: string;
+  dominio_id: string;
+  numero: number;
+  texto_es: string;
+  texto_en: string;
+  tipo: "control" | "riesgo";
+  polaridad: "positiva" | "negativa";
+  tier: Tier;
+  multiplicador: number;
+  impacto_primario: string | null;
+  referencias_regulatorias: string | null;
+  justificacion_tier: string | null;
+  explicacion_control_es: string | null;
+  explicacion_control_en: string | null;
+}
+
 export interface Dominio {
   id: string;
   codigo: string;

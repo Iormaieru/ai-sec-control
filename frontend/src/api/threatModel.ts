@@ -19,6 +19,14 @@ export function quitarDominioCompleto(casoId: string, dominioCodigo: string): Pr
   );
 }
 
+export function seleccionarPreguntaIndividual(casoId: string, preguntaId: string): Promise<CasoPregunta[]> {
+  return api.post<CasoPregunta[]>(`/casos/${casoId}/preguntas`, { pregunta_ids: [preguntaId] });
+}
+
+export function quitarPreguntaIndividual(casoId: string, preguntaId: string): Promise<void> {
+  return api.delete<void>(`/casos/${casoId}/preguntas/${preguntaId}`);
+}
+
 export interface RespuestaUpdatePayload {
   respuesta: RespuestaValor;
   control_compensatorio?: string | null;

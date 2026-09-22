@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from "
 import { Link, useParams } from "react-router-dom";
 import { getCaso } from "../api/casos";
 import { ApiError } from "../api/client";
+import { listPreguntasCatalogo } from "../api/catalog";
 import { analyzeDocument, downloadExportDocx } from "../api/documents";
 import {
   actualizarRespuesta,
@@ -9,7 +10,9 @@ import {
   listCasoPreguntas,
   listDominios,
   quitarDominioCompleto,
+  quitarPreguntaIndividual,
   seleccionarDominioCompleto,
+  seleccionarPreguntaIndividual,
 } from "../api/threatModel";
 import type {
   Caso,
@@ -17,6 +20,7 @@ import type {
   CasoScore,
   DocumentoAnalizado,
   Dominio,
+  PreguntaCatalogo,
   RespuestaValor,
 } from "../api/types";
 import {
@@ -36,6 +40,7 @@ export function CasoPreguntasPage() {
   const [score, setScore] = useState<CasoScore | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dominioExpandido, setDominioExpandido] = useState<string | null>(null);
 
   async function loadAll() {
     if (!casoId) return;
@@ -181,25 +186,50 @@ export function CasoPreguntasPage() {
       <div className="card mb-4">
         <div className="card-body">
           <h2 className="h5">Agregar preguntas por dominio</h2>
-          <div className="d-flex gap-2 flex-wrap">
+          <p className="text-muted small">
+            "Agregar todo" suma las preguntas completas del dominio. Si la IA no recomendó todo lo
+            necesario, usá "Elegir individualmente" para sumar (o sacar) preguntas puntuales.
+          </p>
+          <div className="d-flex flex-column gap-2">
             {dominios.map((dominio) => {
               const seleccionadas = preguntasPorDominio.get(dominio.codigo)?.length ?? 0;
               const completo = seleccionadas === dominio.total_preguntas;
               const parcial = seleccionadas > 0 && !completo;
+              const expandido = dominioExpandido === dominio.codigo;
               return (
-                <button
-                  key={dominio.id}
-                  className={`btn btn-sm ${completo ? "btn-success" : parcial ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => (completo ? handleQuitarDominio(dominio) : handleAgregarDominio(dominio.codigo))}
-                  title={completo ? `Quitar ${dominio.nombre}` : dominio.nombre}
-                >
-                  {completo ? (
-                    <i className="bi bi-x-lg me-1" />
-                  ) : (
-                    parcial && <i className="bi bi-check-lg me-1" />
+                <div key={dominio.id}>
+                  <div className="d-flex gap-2 align-items-center">
+                    <button
+                      className={`btn btn-sm ${completo ? "btn-success" : parcial ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() =>
+                        completo ? handleQuitarDominio(dominio) : handleAgregarDominio(dominio.codigo)
+                      }
+                      title={completo ? `Quitar ${dominio.nombre}` : dominio.nombre}
+                    >
+                      {completo ? (
+                        <i className="bi bi-x-lg me-1" />
+                      ) : (
+                        parcial && <i className="bi bi-check-lg me-1" />
+                      )}
+                      {dominio.codigo} ({seleccionadas}/{dominio.total_preguntas})
+                    </button>
+                    <button
+                      className="btn btn-sm btn-link text-decoration-none"
+                      onClick={() => setDominioExpandido(expandido ? null : dominio.codigo)}
+                    >
+                      {dominio.nombre}
+                      <i className={`bi ms-1 ${expandido ? "bi-chevron-up" : "bi-chevron-down"}`} />
+                    </button>
+                  </div>
+                  {expandido && (
+                    <PreguntaCatalogoPanel
+                      casoId={caso.id}
+                      dominio={dominio}
+                      seleccionadas={preguntasPorDominio.get(dominio.codigo) ?? []}
+                      onChanged={refreshPreguntasYScore}
+                    />
                   )}
-                  {dominio.codigo} ({seleccionadas}/{dominio.total_preguntas})
-                </button>
+                </div>
               );
             })}
           </div>
@@ -272,6 +302,87 @@ export function CasoPreguntasPage() {
         </div>
       ))}
     </>
+  );
+}
+
+function PreguntaCatalogoPanel({
+  casoId,
+  dominio,
+  seleccionadas,
+  onChanged,
+}: {
+  casoId: string;
+  dominio: Dominio;
+  seleccionadas: CasoPregunta[];
+  onChanged: () => Promise<void>;
+}) {
+  const [catalogo, setCatalogo] = useState<PreguntaCatalogo[] | null>(null);
+  const [pendientes, setPendientes] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listPreguntasCatalogo(dominio.codigo)
+      .then(setCatalogo)
+      .catch((err) => setError(err instanceof ApiError ? err.detail : "No se pudo cargar el catálogo"));
+  }, [dominio.codigo]);
+
+  const seleccionadasIds = useMemo(
+    () => new Set(seleccionadas.map((p) => p.pregunta_id)),
+    [seleccionadas],
+  );
+
+  async function handleToggle(preguntaId: string, marcada: boolean) {
+    setPendientes((prev) => new Set(prev).add(preguntaId));
+    setError(null);
+    try {
+      if (marcada) {
+        await seleccionarPreguntaIndividual(casoId, preguntaId);
+      } else {
+        await quitarPreguntaIndividual(casoId, preguntaId);
+      }
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "No se pudo actualizar la selección");
+    } finally {
+      setPendientes((prev) => {
+        const next = new Set(prev);
+        next.delete(preguntaId);
+        return next;
+      });
+    }
+  }
+
+  return (
+    <div className="catalogo-panel">
+      {error && <div className="alert alert-danger py-2 my-2">{error}</div>}
+      {!catalogo ? (
+        <p className="text-muted small my-2">Cargando preguntas…</p>
+      ) : (
+        <ul className="list-group my-2">
+          {catalogo.map((pregunta) => {
+            const marcada = seleccionadasIds.has(pregunta.id);
+            return (
+              <li key={pregunta.id} className="list-group-item">
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id={`pregunta-${pregunta.id}`}
+                    checked={marcada}
+                    disabled={pendientes.has(pregunta.id)}
+                    onChange={(e) => handleToggle(pregunta.id, e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor={`pregunta-${pregunta.id}`}>
+                    <span className="text-muted">{pregunta.numero}.</span> {pregunta.texto_es}{" "}
+                    <span className="badge text-bg-light">{TIER_LABELS[pregunta.tier]}</span>
+                  </label>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 

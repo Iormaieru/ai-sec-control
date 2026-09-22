@@ -64,6 +64,21 @@ def quitar_preguntas_de_dominio(
     return service.list_caso_preguntas(db, caso)
 
 
+@router.delete("/{pregunta_id}", status_code=status.HTTP_204_NO_CONTENT)
+def quitar_pregunta(
+    pregunta_id: uuid.UUID,
+    caso: Caso = Depends(get_caso_from_path),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> None:
+    caso_pregunta = service.get_caso_pregunta(db, caso, pregunta_id)
+    if caso_pregunta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="La pregunta no está en el alcance de este caso"
+        )
+    service.remove_pregunta(db, caso_pregunta)
+
+
 @router.put("/{pregunta_id}/respuesta", response_model=CasoPreguntaOut)
 def actualizar_respuesta(
     pregunta_id: uuid.UUID,

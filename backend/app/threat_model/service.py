@@ -136,6 +136,15 @@ def get_caso_pregunta(db: Session, caso: Caso, pregunta_id: uuid.UUID) -> CasoPr
     )
 
 
+def remove_pregunta(db: Session, caso_pregunta: CasoPregunta) -> None:
+    """Saca una única pregunta del alcance del caso (borra también su
+    CasoRespuesta por cascade) — contraparte puntual de
+    remove_preguntas_by_dominio, para cuando el humano quiere sacar sólo
+    una pregunta que no aplica en vez de todo el dominio."""
+    db.delete(caso_pregunta)
+    db.commit()
+
+
 def upsert_respuesta(db: Session, caso_pregunta: CasoPregunta, payload: dict) -> CasoPreguntaOut:
     respuesta = caso_pregunta.respuesta
     for key, value in payload.items():

@@ -208,3 +208,58 @@ def test_quitar_dominio_desconocido_devuelve_400(
     )
 
     assert response.status_code == 400
+
+
+def test_seleccionar_preguntas_individuales_por_id(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None
+) -> None:
+    """Selección manual puntual: el humano suma preguntas de un dominio sin
+    agregar el dominio completo (para lo que la IA no haya recomendado)."""
+    caso = _create_caso(client, auth_headers)
+    dominio = db.query(Dominio).filter(Dominio.codigo == "CYB").one()
+    preguntas = db.query(Pregunta).filter(Pregunta.dominio_id == dominio.id).limit(2).all()
+
+    response = client.post(
+        f"/casos/{caso['id']}/preguntas",
+        json={"pregunta_ids": [str(preguntas[0].id)]},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert len(response.json()) == 1
+
+    # sumar una segunda, individual, sin tocar el resto del dominio
+    response2 = client.post(
+        f"/casos/{caso['id']}/preguntas",
+        json={"pregunta_ids": [str(preguntas[1].id)]},
+        headers=auth_headers,
+    )
+    assert len(response2.json()) == 2
+
+
+def test_quitar_pregunta_individual(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None
+) -> None:
+    caso = _create_caso(client, auth_headers)
+    client.post(f"/casos/{caso['id']}/preguntas", json={"dominio_codigo": "TAC"}, headers=auth_headers)
+    preguntas = client.get(f"/casos/{caso['id']}/preguntas", headers=auth_headers).json()
+    a_quitar = preguntas[0]
+
+    response = client.delete(
+        f"/casos/{caso['id']}/preguntas/{a_quitar['pregunta_id']}", headers=auth_headers
+    )
+    assert response.status_code == 204
+
+    restantes = client.get(f"/casos/{caso['id']}/preguntas", headers=auth_headers).json()
+    assert len(restantes) == len(preguntas) - 1
+    assert all(p["pregunta_id"] != a_quitar["pregunta_id"] for p in restantes)
+
+
+def test_quitar_pregunta_fuera_de_alcance_devuelve_404(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None
+) -> None:
+    caso = _create_caso(client, auth_headers)
+    pregunta = db.query(Pregunta).first()
+
+    response = client.delete(f"/casos/{caso['id']}/preguntas/{pregunta.id}", headers=auth_headers)
+
+    assert response.status_code == 404
