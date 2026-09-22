@@ -105,3 +105,12 @@ def test_add_and_remove_contacto(client: TestClient, auth_headers: dict[str, str
 def test_get_unknown_caso_returns_404(client: TestClient, auth_headers: dict[str, str]) -> None:
     response = client.get("/casos/00000000-0000-0000-0000-000000000000", headers=auth_headers)
     assert response.status_code == 404
+
+
+def test_unauthenticated_request_for_unknown_caso_returns_401_not_404(client: TestClient) -> None:
+    """Regresión: get_caso_from_path solía resolverse antes que la
+    autenticación, así que una request sin token contra un caso
+    inexistente devolvía 404 (filtrando si el caso existe) en vez de 401.
+    Ver app/casos/deps.py."""
+    response = client.get("/casos/00000000-0000-0000-0000-000000000000")
+    assert response.status_code == 401

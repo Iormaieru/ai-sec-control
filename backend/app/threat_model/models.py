@@ -47,5 +47,9 @@ class CasoRespuesta(AuditMixin, Base):
     fecha_objetivo: Mapped[date | None] = mapped_column(Date, nullable=True)
     evidencia_esperada: Mapped[str | None] = mapped_column(Text, nullable=True)
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Pobladas por el análisis de IA (documents/service.py, Incremento 2) —
+    # no existen en el Excel original, es contenido nuevo que genera el LLM.
+    instrucciones_respuesta_es: Mapped[str | None] = mapped_column(Text, nullable=True)
+    instrucciones_respuesta_en: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     caso_pregunta: Mapped["CasoPregunta"] = relationship(back_populates="respuesta")

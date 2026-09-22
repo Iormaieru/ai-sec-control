@@ -48,6 +48,6 @@ def _reset_users_and_audit_log() -> Generator[None, None, None]:
         conn.execute(
             text(
                 "TRUNCATE TABLE users, audit_log, preguntas, dominios, casos, contactos, "
-                "caso_preguntas, caso_respuestas RESTART IDENTITY CASCADE"
+                "caso_preguntas, caso_respuestas, caso_documentos RESTART IDENTITY CASCADE"
             )
         )

@@ -125,7 +125,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   mockeado (sin red en CI) verificando el mapeo request/response; un test adicional que hace una
   llamada real, marcado `skipif` no hay `AISEC_OPENAI_API_KEY` configurada.
 
-- [ ] **T17 — Persistencia + endpoint de análisis**
+- [x] **T17 — Persistencia + endpoint de análisis**
   `documents/models.py::CasoDocumento` (caso_id, nombre_archivo, texto_extraido, clasificacion) +
   migración. `CasoRespuesta` suma `instrucciones_respuesta_es/en` + migración. Servicio que
   extrae texto -> llama al LLMProvider -> crea CasoPregunta para las preguntas recomendadas que

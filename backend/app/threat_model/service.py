@@ -67,7 +67,9 @@ def _rows_query(caso_id: uuid.UUID):
     )
 
 
-def _to_out(caso_pregunta: CasoPregunta, respuesta: CasoRespuesta, pregunta: Pregunta, dominio: Dominio) -> CasoPreguntaOut:
+def to_caso_pregunta_out(
+    caso_pregunta: CasoPregunta, respuesta: CasoRespuesta, pregunta: Pregunta, dominio: Dominio
+) -> CasoPreguntaOut:
     pts = compute_pts_obtenidos(respuesta.respuesta, pregunta.polaridad, pregunta.multiplicador)
     maxapl = compute_maximo_aplicable(respuesta.respuesta, pregunta.multiplicador)
     residual = compute_riesgo_residual(
@@ -94,12 +96,14 @@ def _to_out(caso_pregunta: CasoPregunta, respuesta: CasoRespuesta, pregunta: Pre
         fecha_objetivo=respuesta.fecha_objetivo,
         evidencia_esperada=respuesta.evidencia_esperada,
         observaciones=respuesta.observaciones,
+        instrucciones_respuesta_es=respuesta.instrucciones_respuesta_es,
+        instrucciones_respuesta_en=respuesta.instrucciones_respuesta_en,
     )
 
 
 def list_caso_preguntas(db: Session, caso: Caso) -> list[CasoPreguntaOut]:
     rows = db.execute(_rows_query(caso.id)).all()
-    return [_to_out(*row) for row in rows]
+    return [to_caso_pregunta_out(*row) for row in rows]
 
 
 def get_caso_pregunta(db: Session, caso: Caso, pregunta_id: uuid.UUID) -> CasoPregunta | None:
@@ -115,7 +119,12 @@ def upsert_respuesta(db: Session, caso_pregunta: CasoPregunta, payload: dict) ->
     db.commit()
 
     row = db.execute(_rows_query(caso_pregunta.caso_id).where(Pregunta.id == caso_pregunta.pregunta_id)).one()
-    return _to_out(*row)
+    return to_caso_pregunta_out(*row)
+
+
+def get_caso_pregunta_out(db: Session, caso_id: uuid.UUID, pregunta_id: uuid.UUID) -> CasoPreguntaOut:
+    row = db.execute(_rows_query(caso_id).where(Pregunta.id == pregunta_id)).one()
+    return to_caso_pregunta_out(*row)
 
 
 def get_caso_score(db: Session, caso: Caso) -> CasoScoreOut:

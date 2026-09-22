@@ -44,6 +44,8 @@ class CasoPreguntaOut(BaseModel):
     fecha_objetivo: date | None
     evidencia_esperada: str | None
     observaciones: str | None
+    instrucciones_respuesta_es: str | None
+    instrucciones_respuesta_en: str | None
 
 
 class DomainScoreOut(BaseModel):
