@@ -29,6 +29,7 @@ export const SEMAFORO_LABELS: Record<Semaforo, string> = {
   moderado: "🟡 Moderado",
   vulnerable: "🟠 Vulnerable",
   critico: "🔴 Crítico",
+  sin_evaluar: "⚪ Sin evaluar",
 };
 
 export function formatPct(value: number): string {

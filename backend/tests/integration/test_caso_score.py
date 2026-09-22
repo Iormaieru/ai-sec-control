@@ -26,9 +26,11 @@ def test_score_de_caso_sin_preguntas_es_cero_en_todos_los_dominios(
     body = response.json()
     assert len(body["dominios"]) == 8
     assert all(d["compliance_pct"] == 0 for d in body["dominios"])
-    assert all(d["semaforo"] == "critico" for d in body["dominios"])
+    # "sin_evaluar", no "critico": 0 preguntas seleccionadas no es lo mismo
+    # que haberlas respondido mal.
+    assert all(d["semaforo"] == "sin_evaluar" for d in body["dominios"])
     assert body["global_score"]["compliance_pct"] == 0
-    assert body["global_score"]["semaforo"] == "critico"
+    assert body["global_score"]["semaforo"] == "sin_evaluar"
 
 
 def test_score_reproduce_fila_real_del_excel_para_un_dominio(

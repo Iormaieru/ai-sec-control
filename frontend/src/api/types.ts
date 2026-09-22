@@ -43,7 +43,7 @@ export interface Caso {
 export type RespuestaValor = "SI" | "NO" | "NA_ARQ" | "NA_FASE" | "PENDIENTE";
 export type Estado = "cumple" | "brecha" | "pendiente" | "no_aplica_arquitectura" | "no_aplica_fase";
 export type Tier = "critico" | "alto" | "estandar";
-export type Semaforo = "solido" | "moderado" | "vulnerable" | "critico";
+export type Semaforo = "solido" | "moderado" | "vulnerable" | "critico" | "sin_evaluar";
 
 export interface CasoPregunta {
   caso_pregunta_id: string;

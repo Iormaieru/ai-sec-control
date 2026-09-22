@@ -51,6 +51,13 @@ class OpenAIProvider(LLMProvider):
         catalog_payload = [q.model_dump() for q in catalog]
         completion = self._client.chat.completions.parse(
             model=self._model,
+            # temperature=0 + seed fijo: acota la variabilidad entre corridas
+            # del mismo documento (no la elimina del todo — con un catálogo
+            # de 138 preguntas y una decisión de relevancia inherentemente
+            # subjetiva, el modelo no queda 100% determinístico, pero
+            # converge mucho más que sin esto).
+            temperature=0,
+            seed=42,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {

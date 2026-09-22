@@ -61,7 +61,9 @@ def test_subset_with_zero_denominator_returns_zero_not_exception() -> None:
     score = domain_aggregate(todas_pendientes, Decimal("0.10"))
 
     assert score.compliance_pct == Decimal(0)
-    assert score.semaforo == "critico"
+    # respondidas=0 (todo Pendiente) -> "sin_evaluar", no "critico": todavía
+    # no se respondió nada, 0% acá no significa que esté mal evaluado.
+    assert score.semaforo == "sin_evaluar"
 
 
 def test_empty_subset_returns_zero_not_exception() -> None:
@@ -70,6 +72,7 @@ def test_empty_subset_returns_zero_not_exception() -> None:
     assert score.total_preguntas == 0
     assert score.compliance_pct == Decimal(0)
     assert score.residual_pct == Decimal(0)
+    assert score.semaforo == "sin_evaluar"  # 0 preguntas seleccionadas, no "critico"
 
 
 def test_all_na_domain_returns_zero_compliance_not_exception() -> None:
@@ -83,6 +86,7 @@ def test_all_na_domain_returns_zero_compliance_not_exception() -> None:
     assert score.na_total == 2
     assert score.compliance_pct == Decimal(0)
     assert score.residual_pct == Decimal(0)
+    assert score.semaforo == "sin_evaluar"  # todo NA -> nada respondido de verdad
 
 
 def test_partial_subset_only_counts_selected_questions() -> None:
@@ -110,7 +114,12 @@ def test_partial_subset_only_counts_selected_questions() -> None:
     ],
 )
 def test_semaforo_thresholds(pct: Decimal, expected: str) -> None:
-    assert semaforo_for(pct) == expected
+    assert semaforo_for(pct, respondidas=1) == expected
+
+
+@pytest.mark.parametrize("pct", [Decimal("0.0"), Decimal("1.0"), Decimal("0.5")])
+def test_semaforo_sin_evaluar_gana_a_cualquier_umbral_si_no_hay_respondidas(pct: Decimal) -> None:
+    assert semaforo_for(pct, respondidas=0) == "sin_evaluar"
 
 
 def test_global_score_sums_domain_contributions() -> None:

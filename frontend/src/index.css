@@ -187,6 +187,12 @@ body {
   border-color: #e88a8a !important;
 }
 
+.score-card--sin_evaluar {
+  background: #f1f2f5;
+  border-color: #d0d3da !important;
+  color: #6b7280;
+}
+
 .pregunta-texto {
   max-width: 360px;
 }

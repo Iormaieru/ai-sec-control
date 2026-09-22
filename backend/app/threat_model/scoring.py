@@ -17,6 +17,7 @@ SEMAFORO_SOLIDO = "solido"
 SEMAFORO_MODERADO = "moderado"
 SEMAFORO_VULNERABLE = "vulnerable"
 SEMAFORO_CRITICO = "critico"
+SEMAFORO_SIN_EVALUAR = "sin_evaluar"
 
 NA_RESPUESTAS = frozenset({RespuestaValor.NA_ARQ, RespuestaValor.NA_FASE})
 PENDIENTE_RESPUESTAS = frozenset({None, RespuestaValor.PENDIENTE})
@@ -111,8 +112,18 @@ class GlobalScore:
     semaforo: str
 
 
-def semaforo_for(compliance_pct: Decimal) -> str:
-    """Umbrales de semáforo: ≥80% Sólido · 60-79% Moderado · 40-59% Vulnerable · <40% Crítico."""
+def semaforo_for(compliance_pct: Decimal, respondidas: int = 1) -> str:
+    """Umbrales de semáforo: ≥80% Sólido · 60-79% Moderado · 40-59% Vulnerable · <40% Crítico.
+
+    respondidas=0 (nada seleccionado, o seleccionado pero todo Pendiente)
+    devuelve "sin_evaluar" en vez de "critico": 0% de compliance por falta
+    de evaluación no es lo mismo que 0% por haber respondido mal — visualmente
+    no se debe confundir "no lo miramos todavía" con "lo miramos y está mal".
+    El default respondidas=1 es sólo para no romper otras llamadas que no
+    necesitan este matiz (ninguna en este módulo al día de hoy).
+    """
+    if respondidas == 0:
+        return SEMAFORO_SIN_EVALUAR
     if compliance_pct >= Decimal("0.8"):
         return SEMAFORO_SOLIDO
     if compliance_pct >= Decimal("0.6"):
@@ -179,7 +190,7 @@ def domain_aggregate(respuestas: list[RespuestaInput], peso: Decimal) -> DomainS
         contrib_cumplimiento=compliance_pct * peso,
         contrib_residual=residual_pct * peso,
         gap_ponderado=(Decimal(1) - compliance_pct) * peso,
-        semaforo=semaforo_for(compliance_pct),
+        semaforo=semaforo_for(compliance_pct, respondidas),
     )
 
 
@@ -197,5 +208,5 @@ def global_score(domain_scores: list[DomainScore]) -> GlobalScore:
         residual_pct=residual_pct,
         completitud_pct=completitud_pct,
         brechas_criticas=brechas_criticas,
-        semaforo=semaforo_for(compliance_pct),
+        semaforo=semaforo_for(compliance_pct, respondidas),
     )

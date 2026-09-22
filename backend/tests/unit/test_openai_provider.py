@@ -67,6 +67,9 @@ def test_analyze_document_maps_applicable_questions_only(settings_with_key: None
     # Verifica que se haya pedido salida estructurada con nuestro schema
     _, kwargs = mock_client.chat.completions.parse.call_args
     assert kwargs["response_format"] is _LLMAnalysisResponse
+    # temperature=0 + seed fijo: acota la variabilidad entre corridas
+    assert kwargs["temperature"] == 0
+    assert kwargs["seed"] == 42
 
 
 def test_analyze_document_raises_if_response_not_parsed(settings_with_key: None) -> None:
