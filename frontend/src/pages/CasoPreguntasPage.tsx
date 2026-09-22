@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCaso } from "../api/casos";
 import { ApiError } from "../api/client";
@@ -8,6 +8,7 @@ import {
   getCasoScore,
   listCasoPreguntas,
   listDominios,
+  quitarDominioCompleto,
   seleccionarDominioCompleto,
 } from "../api/threatModel";
 import type {
@@ -77,6 +78,24 @@ export function CasoPreguntasPage() {
       await refreshPreguntasYScore();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "No se pudieron agregar las preguntas");
+    }
+  }
+
+  async function handleQuitarDominio(dominio: Dominio) {
+    if (!casoId) return;
+    const preguntasDelDominio = preguntasPorDominio.get(dominio.codigo) ?? [];
+    const hayRespondidas = preguntasDelDominio.some((p) => p.respuesta !== "PENDIENTE");
+    const mensaje = hayRespondidas
+      ? `${dominio.codigo} tiene preguntas ya respondidas. ¿Quitar igual las ${preguntasDelDominio.length} preguntas del dominio? Se pierden las respuestas cargadas.`
+      : `¿Quitar las ${preguntasDelDominio.length} preguntas de ${dominio.codigo} del alcance del caso?`;
+    if (!window.confirm(mensaje)) return;
+
+    setError(null);
+    try {
+      await quitarDominioCompleto(casoId, dominio.codigo);
+      await refreshPreguntasYScore();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "No se pudieron quitar las preguntas");
     }
   }
 
@@ -166,15 +185,19 @@ export function CasoPreguntasPage() {
             {dominios.map((dominio) => {
               const seleccionadas = preguntasPorDominio.get(dominio.codigo)?.length ?? 0;
               const completo = seleccionadas === dominio.total_preguntas;
+              const parcial = seleccionadas > 0 && !completo;
               return (
                 <button
                   key={dominio.id}
-                  className={`btn btn-sm ${completo ? "btn-success" : "btn-outline-primary"}`}
-                  onClick={() => handleAgregarDominio(dominio.codigo)}
-                  disabled={completo}
-                  title={dominio.nombre}
+                  className={`btn btn-sm ${completo ? "btn-success" : parcial ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => (completo ? handleQuitarDominio(dominio) : handleAgregarDominio(dominio.codigo))}
+                  title={completo ? `Quitar ${dominio.nombre}` : dominio.nombre}
                 >
-                  {completo && <i className="bi bi-check-lg me-1" />}
+                  {completo ? (
+                    <i className="bi bi-x-lg me-1" />
+                  ) : (
+                    parcial && <i className="bi bi-check-lg me-1" />
+                  )}
                   {dominio.codigo} ({seleccionadas}/{dominio.total_preguntas})
                 </button>
               );
@@ -252,16 +275,48 @@ export function CasoPreguntasPage() {
   );
 }
 
+const ACCEPTED_EXTENSIONS = [".pdf", ".docx"];
+
+function isAcceptedFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
 function DocumentAnalysisCard({ casoId, onAnalyzed }: { casoId: string; onAnalyzed: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DocumentoAnalizado | null>(null);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    setFile(event.target.files?.[0] ?? null);
+  function selectFile(selected: File | null) {
+    if (selected && !isAcceptedFile(selected)) {
+      setError("Sólo se acepta PDF o Word (.docx).");
+      return;
+    }
+    setFile(selected);
     setResult(null);
     setError(null);
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    selectFile(event.target.files?.[0] ?? null);
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    selectFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(false);
   }
 
   async function handleAnalyze() {
@@ -288,18 +343,44 @@ function DocumentAnalysisCard({ casoId, onAnalyzed }: { casoId: string; onAnalyz
           clasifica la solución y recomienda qué preguntas del catálogo aplican, con instrucciones de
           cómo responder cada una.
         </p>
-        <div className="d-flex gap-2 align-items-center flex-wrap">
+
+        <div
+          className={`dropzone${dragActive ? " dropzone--active" : ""}${file ? " dropzone--has-file" : ""}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          <i className="bi bi-cloud-arrow-up fs-2 text-primary" />
+          {file ? (
+            <p className="mb-0 fw-semibold">{file.name}</p>
+          ) : (
+            <p className="mb-0">
+              Arrastrá y soltá un archivo acá, o{" "}
+              <label htmlFor="documento-input" className="text-primary text-decoration-underline" role="button">
+                elegilo del disco
+              </label>
+            </p>
+          )}
           <input
+            id="documento-input"
             type="file"
-            className="form-control"
-            style={{ maxWidth: 360 }}
+            className="visually-hidden"
             accept=".pdf,.docx"
             onChange={handleFileChange}
           />
+        </div>
+
+        <div className="d-flex gap-2 mt-3">
           <button className="btn btn-primary" onClick={handleAnalyze} disabled={!file || analyzing}>
             {analyzing ? "Analizando…" : "Analizar"}
           </button>
+          {file && (
+            <button className="btn btn-outline-secondary" onClick={() => selectFile(null)} disabled={analyzing}>
+              Quitar archivo
+            </button>
+          )}
         </div>
+
         {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
         {result && (
           <div className="alert alert-success mt-3 mb-0">

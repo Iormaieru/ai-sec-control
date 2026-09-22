@@ -160,3 +160,51 @@ def test_get_preguntas_ordena_por_dominio_y_numero(
 
     body = response.json()
     assert [item["numero"] for item in body] == list(range(1, 8))
+
+
+def test_quitar_dominio_completo(client: TestClient, auth_headers: dict[str, str], catalog_loaded: None) -> None:
+    caso = _create_caso(client, auth_headers)
+    client.post(f"/casos/{caso['id']}/preguntas", json={"dominio_codigo": "TAC"}, headers=auth_headers)
+    client.post(f"/casos/{caso['id']}/preguntas", json={"dominio_codigo": "DDG"}, headers=auth_headers)
+
+    response = client.delete(
+        f"/casos/{caso['id']}/preguntas", params={"dominio_codigo": "TAC"}, headers=auth_headers
+    )
+
+    assert response.status_code == 200, response.text
+    restantes = response.json()
+    assert len(restantes) == 10  # sólo quedan las 10 de DDG
+    assert all(p["dominio_codigo"] == "DDG" for p in restantes)
+
+
+def test_quitar_dominio_tambien_borra_las_respuestas_cargadas(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None
+) -> None:
+    caso = _create_caso(client, auth_headers)
+    dominio = db.query(Dominio).filter(Dominio.codigo == "TAC").one()
+    pregunta = db.query(Pregunta).filter(Pregunta.dominio_id == dominio.id, Pregunta.numero == 1).one()
+    client.post(f"/casos/{caso['id']}/preguntas", json={"dominio_codigo": "TAC"}, headers=auth_headers)
+    client.put(
+        f"/casos/{caso['id']}/preguntas/{pregunta.id}/respuesta",
+        json={"respuesta": "SI"},
+        headers=auth_headers,
+    )
+
+    client.delete(f"/casos/{caso['id']}/preguntas", params={"dominio_codigo": "TAC"}, headers=auth_headers)
+
+    # re-agregar el dominio debe volver a Pendiente, no arrastrar la respuesta anterior
+    response = client.post(f"/casos/{caso['id']}/preguntas", json={"dominio_codigo": "TAC"}, headers=auth_headers)
+    body = response.json()
+    assert all(p["respuesta"] == "PENDIENTE" for p in body)
+
+
+def test_quitar_dominio_desconocido_devuelve_400(
+    client: TestClient, auth_headers: dict[str, str], catalog_loaded: None
+) -> None:
+    caso = _create_caso(client, auth_headers)
+
+    response = client.delete(
+        f"/casos/{caso['id']}/preguntas", params={"dominio_codigo": "NOPE"}, headers=auth_headers
+    )
+
+    assert response.status_code == 400

@@ -50,6 +50,20 @@ def get_preguntas(
     return service.list_caso_preguntas(db, caso)
 
 
+@router.delete("", response_model=list[CasoPreguntaOut])
+def quitar_preguntas_de_dominio(
+    dominio_codigo: str,
+    caso: Caso = Depends(get_caso_from_path),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[CasoPreguntaOut]:
+    try:
+        service.remove_preguntas_by_dominio(db, caso, dominio_codigo)
+    except service.DominioDesconocido as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return service.list_caso_preguntas(db, caso)
+
+
 @router.put("/{pregunta_id}/respuesta", response_model=CasoPreguntaOut)
 def actualizar_respuesta(
     pregunta_id: uuid.UUID,

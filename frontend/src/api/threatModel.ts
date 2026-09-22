@@ -13,6 +13,12 @@ export function seleccionarDominioCompleto(casoId: string, dominioCodigo: string
   return api.post<CasoPregunta[]>(`/casos/${casoId}/preguntas`, { dominio_codigo: dominioCodigo });
 }
 
+export function quitarDominioCompleto(casoId: string, dominioCodigo: string): Promise<CasoPregunta[]> {
+  return api.delete<CasoPregunta[]>(
+    `/casos/${casoId}/preguntas?dominio_codigo=${encodeURIComponent(dominioCodigo)}`,
+  );
+}
+
 export interface RespuestaUpdatePayload {
   respuesta: RespuestaValor;
   control_compensatorio?: string | null;

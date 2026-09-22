@@ -56,6 +56,30 @@ def add_preguntas(
     return creadas
 
 
+def remove_preguntas_by_dominio(db: Session, caso: Caso, dominio_codigo: str) -> int:
+    """Saca del alcance del caso todas las preguntas de un dominio —
+    contraparte de add_preguntas(dominio_codigo=...). Borra también sus
+    CasoRespuesta (cascade de la relación) — se pierden las respuestas ya
+    cargadas para esas preguntas, la confirmación queda del lado del
+    frontend antes de llamar a esto."""
+    dominio = db.scalar(select(Dominio).where(Dominio.codigo == dominio_codigo))
+    if dominio is None:
+        raise DominioDesconocido(f"Dominio desconocido: {dominio_codigo}")
+
+    caso_preguntas = list(
+        db.scalars(
+            select(CasoPregunta)
+            .join(Pregunta, CasoPregunta.pregunta_id == Pregunta.id)
+            .where(CasoPregunta.caso_id == caso.id, Pregunta.dominio_id == dominio.id)
+        )
+    )
+    for caso_pregunta in caso_preguntas:
+        db.delete(caso_pregunta)
+
+    db.commit()
+    return len(caso_preguntas)
+
+
 def _rows_query(caso_id: uuid.UUID):
     return (
         select(CasoPregunta, CasoRespuesta, Pregunta, Dominio)

@@ -194,3 +194,24 @@ body {
 .mitigacion-input {
   width: 70px;
 }
+
+.dropzone {
+  border: 2px dashed var(--border, #d0d3da);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  background: #fafbfe;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.dropzone--active {
+  border-color: var(--bs-primary);
+  background: rgba(106, 92, 240, 0.06);
+}
+
+.dropzone--has-file {
+  border-style: solid;
+  border-color: var(--bs-primary);
+}
