@@ -87,7 +87,7 @@ dependencias.
   Aceptación: verificación manual end-to-end (crear caso, agregar contacto, cambiar estado).
   Depende de: T8, T11.
 
-- [ ] **T13 — Frontend: grilla de preguntas + dashboard de score**
+- [x] **T13 — Frontend: grilla de preguntas + dashboard de score**
   Selección de preguntas por dominio, edición inline de respuestas, tarjetas de score por dominio
   con color de semáforo, resumen global.
   Aceptación: verificación manual completa — crear caso, seleccionar preguntas de 2-3 dominios,

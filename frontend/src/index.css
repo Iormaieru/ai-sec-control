@@ -217,6 +217,73 @@ main {
   padding: 4px 0;
 }
 
+.dominio-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.domain-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 12px 0 24px;
+}
+
+.score-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.score-card--solido {
+  background: #e7f8ea;
+  border-color: #86d99a;
+}
+
+.score-card--moderado {
+  background: #fef9e6;
+  border-color: #e8cf6b;
+}
+
+.score-card--vulnerable {
+  background: #fdedde;
+  border-color: #eab073;
+}
+
+.score-card--critico {
+  background: #fde3e3;
+  border-color: #e88a8a;
+}
+
+.preguntas-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.preguntas-table th,
+.preguntas-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.pregunta-texto {
+  max-width: 360px;
+}
+
+.mitigacion-input {
+  width: 60px;
+}
+
 h1,
 h2 {
   font-family: var(--heading);
