@@ -119,7 +119,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   según `settings.llm_provider`), `llm/providers/mock_provider.py` (determinístico, sin red, para
   tests). Aceptación: tests del factory y del mock provider.
 
-- [ ] **T16 — Adapter OpenAI**
+- [x] **T16 — Adapter OpenAI**
   `llm/providers/openai_provider.py`: llamada a la API de OpenAI con structured output (JSON
   schema) para garantizar una respuesta parseable. Aceptación: tests con el cliente de OpenAI
   mockeado (sin red en CI) verificando el mapeo request/response; un test adicional que hace una
