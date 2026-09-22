@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.config import Settings
-from app.llm.schemas import CatalogQuestionSummary
+from app.llm.schemas import CatalogQuestionSummary, DocumentImage
 
 
 @pytest.fixture
@@ -70,6 +70,47 @@ def test_analyze_document_maps_applicable_questions_only(settings_with_key: None
     # temperature=0 + seed fijo: acota la variabilidad entre corridas
     assert kwargs["temperature"] == 0
     assert kwargs["seed"] == 42
+
+    # sin imágenes: el contenido del mensaje del usuario es sólo el bloque de texto
+    user_message = kwargs["messages"][1]
+    assert len(user_message["content"]) == 1
+    assert user_message["content"][0]["type"] == "text"
+
+
+def test_analyze_document_incluye_imagenes_como_bloques_multimodales(settings_with_key: None) -> None:
+    from app.llm.providers.openai_provider import OpenAIProvider, _LLMAnalysisResponse
+
+    fake_completion = MagicMock()
+    fake_completion.choices = [
+        MagicMock(
+            message=MagicMock(
+                parsed=_LLMAnalysisResponse(clasificacion="Test", preguntas=[])
+            )
+        )
+    ]
+
+    with patch("app.llm.providers.openai_provider.OpenAI") as mock_openai_cls:
+        mock_client = MagicMock()
+        mock_client.chat.completions.parse.return_value = fake_completion
+        mock_openai_cls.return_value = mock_client
+
+        provider = OpenAIProvider()
+        provider.analyze_document(
+            "texto",
+            _catalog(),
+            images=[
+                DocumentImage(content=b"\x89PNG-fake-bytes", media_type="image/png"),
+                DocumentImage(content=b"\xff\xd8-fake-jpeg", media_type="image/jpeg"),
+            ],
+        )
+
+    _, kwargs = mock_client.chat.completions.parse.call_args
+    user_message = kwargs["messages"][1]
+    assert len(user_message["content"]) == 3  # 1 texto + 2 imágenes
+    image_blocks = [b for b in user_message["content"] if b["type"] == "image_url"]
+    assert len(image_blocks) == 2
+    assert image_blocks[0]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert image_blocks[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
 
 
 def test_analyze_document_raises_if_response_not_parsed(settings_with_key: None) -> None:

@@ -147,7 +147,7 @@ def test_hallucinated_or_malformed_pregunta_ids_are_dropped_not_crashed(
     pregunta_real = db.query(Pregunta).first()
 
     class HallucinatingProvider(LLMProvider):
-        def analyze_document(self, document_text, catalog):
+        def analyze_document(self, document_text, catalog, images=None):
             return DocumentAnalysisResult(
                 clasificacion="Clasificación de prueba",
                 preguntas_recomendadas=[
@@ -184,3 +184,41 @@ def test_hallucinated_or_malformed_pregunta_ids_are_dropped_not_crashed(
     body = response.json()
     assert len(body["preguntas_recomendadas"]) == 1
     assert body["preguntas_recomendadas"][0]["pregunta_id"] == str(pregunta_real.id)
+
+
+def test_imagenes_del_documento_llegan_al_llm_provider(
+    client: TestClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch, catalog_loaded: None
+) -> None:
+    """Un diagrama pegado en el .docx debe llegar como imagen al provider,
+    no perderse silenciosamente (regresión: antes sólo se extraía texto)."""
+    import pymupdf
+
+    from app.llm.base import LLMProvider
+    from app.llm.schemas import DocumentAnalysisResult
+
+    imagenes_recibidas = []
+
+    class CapturingProvider(LLMProvider):
+        def analyze_document(self, document_text, catalog, images=None):
+            imagenes_recibidas.extend(images or [])
+            return DocumentAnalysisResult(clasificacion="Test", preguntas_recomendadas=[])
+
+    monkeypatch.setattr("app.documents.service.get_llm_provider", lambda: CapturingProvider())
+
+    document = Document()
+    document.add_paragraph("Diagrama de arquitectura:")
+    pixmap = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 20, 20))
+    document.add_picture(io.BytesIO(pixmap.tobytes("png")))
+    buffer = io.BytesIO()
+    document.save(buffer)
+
+    caso = _create_caso(client, auth_headers)
+    response = client.post(
+        f"/casos/{caso['id']}/documentos",
+        files={"file": ("con_diagrama.docx", buffer.getvalue(), DOCX_CONTENT_TYPE)},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201, response.text
+    assert len(imagenes_recibidas) == 1
+    assert imagenes_recibidas[0].media_type == "image/png"

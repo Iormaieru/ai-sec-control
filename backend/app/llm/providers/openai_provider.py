@@ -2,6 +2,7 @@
 del SDK oficial, que valida la respuesta del modelo contra un schema
 Pydantic — evita el parseo manual/frágil de JSON de texto libre."""
 
+import base64
 import json
 
 from openai import OpenAI
@@ -9,16 +10,18 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.llm.base import LLMProvider
-from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, RecommendedQuestion
+from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, DocumentImage, RecommendedQuestion
 
 SYSTEM_PROMPT = (
     "Sos un analista de seguridad de IA del área AI-SEC de un banco. Se te da el texto de un "
-    "documento de arquitectura o de un proyecto/herramienta que usa IA, y un catálogo de preguntas "
-    "de modelado de amenazas (framework PLOT4AI). Tu trabajo es: (1) clasificar en una frase el "
-    "tipo de solución de IA descripta, y (2) para cada pregunta del catálogo, decidir si aplica a "
-    "esta solución específica y, si aplica, dar instrucciones concretas y accionables de cómo "
-    "debería responderla el equipo del proyecto, en español y en inglés. No recomiendes preguntas "
-    "que no tengan relación clara con lo que describe el documento."
+    "documento de arquitectura o de un proyecto/herramienta que usa IA (y, si el documento tenía "
+    "diagramas o capturas, también esas imágenes — analizalas junto con el texto, un diagrama de "
+    "arquitectura suele mostrar componentes, flujos de datos o integraciones que el texto solo no "
+    "menciona), y un catálogo de preguntas de modelado de amenazas (framework PLOT4AI). Tu trabajo "
+    "es: (1) clasificar en una frase el tipo de solución de IA descripta, y (2) para cada pregunta "
+    "del catálogo, decidir si aplica a esta solución específica y, si aplica, dar instrucciones "
+    "concretas y accionables de cómo debería responderla el equipo del proyecto, en español y en "
+    "inglés. No recomiendes preguntas que no tengan relación clara con lo que describe el documento."
 )
 
 
@@ -46,9 +49,31 @@ class OpenAIProvider(LLMProvider):
         self._model = settings.openai_model
 
     def analyze_document(
-        self, document_text: str, catalog: list[CatalogQuestionSummary]
+        self,
+        document_text: str,
+        catalog: list[CatalogQuestionSummary],
+        images: list[DocumentImage] | None = None,
     ) -> DocumentAnalysisResult:
         catalog_payload = [q.model_dump() for q in catalog]
+        text_block = {
+            "type": "text",
+            "text": (
+                f"Documento:\n{document_text}\n\n"
+                f"Catálogo de preguntas (JSON, un objeto por pregunta con "
+                f"pregunta_id/dominio_codigo/numero/texto_es/tier):\n"
+                f"{json.dumps(catalog_payload, ensure_ascii=False)}"
+            ),
+        }
+        image_blocks = [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{img.media_type};base64,{base64.b64encode(img.content).decode('ascii')}"
+                },
+            }
+            for img in (images or [])
+        ]
+
         completion = self._client.chat.completions.parse(
             model=self._model,
             # temperature=0 + seed fijo: acota la variabilidad entre corridas
@@ -60,15 +85,7 @@ class OpenAIProvider(LLMProvider):
             seed=42,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": (
-                        f"Documento:\n{document_text}\n\n"
-                        f"Catálogo de preguntas (JSON, un objeto por pregunta con "
-                        f"pregunta_id/dominio_codigo/numero/texto_es/tier):\n"
-                        f"{json.dumps(catalog_payload, ensure_ascii=False)}"
-                    ),
-                },
+                {"role": "user", "content": [text_block, *image_blocks]},
             ],
             response_format=_LLMAnalysisResponse,
         )

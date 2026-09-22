@@ -8,15 +8,22 @@ llm/factory.py debería importar un provider concreto."""
 
 from abc import ABC, abstractmethod
 
-from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult
+from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, DocumentImage
 
 
 class LLMProvider(ABC):
     @abstractmethod
     def analyze_document(
-        self, document_text: str, catalog: list[CatalogQuestionSummary]
+        self,
+        document_text: str,
+        catalog: list[CatalogQuestionSummary],
+        images: list[DocumentImage] | None = None,
     ) -> DocumentAnalysisResult:
-        """Clasifica el tipo de solución de IA descripta en `document_text` y
-        recomienda cuáles de las preguntas de `catalog` aplican, con
-        instrucciones de cómo responder cada una en español e inglés."""
+        """Clasifica el tipo de solución de IA descripta en `document_text`
+        (+ `images`, si el proveedor soporta visión — páginas de PDF
+        rasterizadas o imágenes embebidas en un .docx, típicamente
+        diagramas de arquitectura) y recomienda cuáles de las preguntas de
+        `catalog` aplican, con instrucciones de cómo responder cada una en
+        español e inglés. Un proveedor sin soporte de imágenes puede
+        ignorar `images` sin romper el contrato."""
         raise NotImplementedError

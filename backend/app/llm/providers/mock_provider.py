@@ -2,12 +2,15 @@
 AISEC_LLM_PROVIDER=mock para desarrollar sin gastar cuota de API real."""
 
 from app.llm.base import LLMProvider
-from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, RecommendedQuestion
+from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, DocumentImage, RecommendedQuestion
 
 
 class MockProvider(LLMProvider):
     def analyze_document(
-        self, document_text: str, catalog: list[CatalogQuestionSummary]
+        self,
+        document_text: str,
+        catalog: list[CatalogQuestionSummary],
+        images: list[DocumentImage] | None = None,
     ) -> DocumentAnalysisResult:
         # Aproximación determinística sin LLM real: recomienda las preguntas
         # Crítico de cada dominio presente en el catálogo pasado.

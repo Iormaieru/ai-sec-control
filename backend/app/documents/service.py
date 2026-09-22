@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from app.casos.models import Caso
 from app.catalog.models import Dominio, Pregunta
 from app.documents.models import CasoDocumento
-from app.documents.parsing import extract_text
+from app.documents.parsing import extract_document
 from app.documents.schemas import DocumentoAnalizadoOut
 from app.llm.factory import get_llm_provider
-from app.llm.schemas import CatalogQuestionSummary, RecommendedQuestion
+from app.llm.schemas import CatalogQuestionSummary, DocumentImage, RecommendedQuestion
 from app.threat_model.models import CasoPregunta, CasoRespuesta
 from app.threat_model.service import get_caso_pregunta_out
 
@@ -56,20 +56,24 @@ def _validated_recommendations(
 def analyze_document(
     db: Session, caso: Caso, *, filename: str, content: bytes, content_type: str
 ) -> DocumentoAnalizadoOut:
-    """Extrae el texto del documento, se lo pasa al LLMProvider configurado
-    junto con el catálogo completo, y con lo que recomienda: crea
-    CasoPregunta para las preguntas que todavía no estaban en alcance y
-    guarda las instrucciones de respuesta ES/EN en su CasoRespuesta."""
-    texto = extract_text(content, content_type)
+    """Extrae texto + imágenes (diagramas/páginas rasterizadas) del
+    documento, se lo pasa al LLMProvider configurado junto con el catálogo
+    completo, y con lo que recomienda: crea CasoPregunta para las preguntas
+    que todavía no estaban en alcance y guarda las instrucciones de
+    respuesta ES/EN en su CasoRespuesta. Sólo el texto se persiste en
+    CasoDocumento — las imágenes son efímeras, se usan sólo para esta
+    llamada al LLM."""
+    extraido = extract_document(content, content_type)
     catalogo = _catalog_summaries(db)
+    imagenes = [DocumentImage(content=img.content, media_type=img.media_type) for img in extraido.images]
 
-    resultado = get_llm_provider().analyze_document(texto, catalogo)
+    resultado = get_llm_provider().analyze_document(extraido.text, catalogo, imagenes)
 
     documento = CasoDocumento(
         caso_id=caso.id,
         nombre_archivo=filename,
         content_type=content_type,
-        texto_extraido=texto,
+        texto_extraido=extraido.text,
         clasificacion=resultado.clasificacion,
     )
     db.add(documento)
