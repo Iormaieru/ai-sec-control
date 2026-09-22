@@ -61,7 +61,7 @@ dependencias.
   Aceptación: tests de CRUD, transición de estado inválida rechazada (403/400), requiere auth.
   Depende de: T2, T3.
 
-- [ ] **T9 — CasoPregunta + CasoRespuesta (selección + respuestas)**
+- [x] **T9 — CasoPregunta + CasoRespuesta (selección + respuestas)**
   Modelos + migración. Endpoints `POST /casos/{id}/preguntas` (agregar al alcance, por IDs o por
   dominio), `GET /casos/{id}/preguntas` (grilla con Estado/Pts/Riesgo calculados vía scoring.py),
   `PUT /casos/{id}/preguntas/{pregunta_id}/respuesta` (upsert, dispara auditoría).
