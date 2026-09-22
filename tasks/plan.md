@@ -107,7 +107,7 @@ preguntas) y MITRE ATLAS (13 preguntas) como referencias, así que no se pierde 
 generar preguntas ad-hoc fuera del catálogo. Proveedor default: **OpenAI**, con la interfaz
 agnóstica de todos modos (`LLMProvider` ABC).
 
-- [ ] **T14 — Parsing de documentos (PDF/DOCX → texto)**
+- [x] **T14 — Parsing de documentos (PDF/DOCX → texto)**
   `documents/parsing.py::extract_text(contenido: bytes, content_type: str) -> str` usando pypdf
   y python-docx. Aceptación: tests con un PDF y un DOCX de prueba, texto no vacío extraído;
   content-type no soportado -> error claro.
