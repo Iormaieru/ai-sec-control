@@ -82,7 +82,7 @@ dependencias.
   Aceptación: `npm run build` sin errores; login manual contra el backend funciona.
   Depende de: T3.
 
-- [ ] **T12 — Frontend: gestión de Casos**
+- [x] **T12 — Frontend: gestión de Casos**
   Listado (filtrable por estado/tipo/empresa), alta, detalle, edición de estado, contactos.
   Aceptación: verificación manual end-to-end (crear caso, agregar contacto, cambiar estado).
   Depende de: T8, T11.

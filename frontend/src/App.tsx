@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { CasoDetailPage } from "./pages/CasoDetailPage";
 import { CasosPage } from "./pages/CasosPage";
 import { LoginPage } from "./pages/LoginPage";
 
@@ -12,6 +13,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <CasosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/casos/:casoId"
+        element={
+          <ProtectedRoute>
+            <CasoDetailPage />
           </ProtectedRoute>
         }
       />
