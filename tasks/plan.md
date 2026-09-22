@@ -39,7 +39,7 @@ dependencias.
   alto=2, estándar=1).
   Depende de: T4.
 
-- [ ] **T6 — Motor de scoring: fórmulas por pregunta (funciones puras)**
+- [x] **T6 — Motor de scoring: fórmulas por pregunta (funciones puras)**
   `threat_model/scoring.py`: `compute_estado`, `compute_pts_obtenidos`, `compute_riesgo_residual`
   — funciones puras sobre primitivos (sin ORM/DB), según la lógica documentada en `docs/SPEC.md`
   sección "Motor de scoring".
