@@ -10,7 +10,7 @@ dependencias.
   Aceptación: `docker compose up` levanta Postgres + backend; `GET /health` devuelve 200;
   `alembic upgrade head` corre sin error sobre una base vacía.
 
-- [ ] **T2 — Auditoría genérica**
+- [x] **T2 — Auditoría genérica**
   `audit/mixin.py` (AuditMixin: created_by/at, updated_by/at) + modelo `AuditLog` + eventos
   SQLAlchemy `before_insert/update` y `before_flush` que leen el actor desde un `ContextVar`.
   Aceptación: test que crea/edita una entidad de prueba y verifica que se completan los campos de
