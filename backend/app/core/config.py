@@ -13,6 +13,13 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # Coma-separado: orígenes del frontend autorizados a llamar a la API.
+    cors_allowed_origins: str = "http://localhost:5173"
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:
