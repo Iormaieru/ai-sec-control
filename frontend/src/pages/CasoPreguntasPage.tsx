@@ -10,7 +10,14 @@ import {
   seleccionarDominioCompleto,
 } from "../api/threatModel";
 import type { Caso, CasoPregunta, CasoScore, Dominio, RespuestaValor } from "../api/types";
-import { ESTADO_LABELS, RESPUESTA_LABELS, RESPUESTA_OPTIONS, SEMAFORO_LABELS, TIER_LABELS, formatPct } from "../threatModel/labels";
+import {
+  ESTADO_LABELS,
+  RESPUESTA_LABELS,
+  RESPUESTA_OPTIONS,
+  SEMAFORO_LABELS,
+  TIER_LABELS,
+  formatPct,
+} from "../threatModel/labels";
 
 export function CasoPreguntasPage() {
   const { casoId } = useParams<{ casoId: string }>();
@@ -112,123 +119,149 @@ export function CasoPreguntasPage() {
     return groups;
   }, [preguntas]);
 
-  if (loading) return <p>Cargando…</p>;
-  if (!caso) return <p className="error">{error ?? "Caso no encontrado"}</p>;
+  if (loading) {
+    return (
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Cargando…</span>
+      </div>
+    );
+  }
+  if (!caso) return <div className="alert alert-danger">{error ?? "Caso no encontrado"}</div>;
 
   return (
-    <main>
-      <p>
-        <Link to={`/casos/${caso.id}`}>← Volver al caso</Link>
-      </p>
-      <h1>Modelado de amenazas — {caso.nombre_proyecto}</h1>
-      {error && <p className="error">{error}</p>}
+    <>
+      <Link
+        to={`/casos/${caso.id}`}
+        className="d-inline-flex align-items-center gap-1 mb-3 text-decoration-none"
+      >
+        <i className="bi bi-arrow-left" /> Volver al caso
+      </Link>
+      <h1 className="h3 mb-3">Modelado de amenazas — {caso.nombre_proyecto}</h1>
+      {error && <div className="alert alert-danger">{error}</div>}
 
       {score && <ScoreDashboard score={score} />}
 
-      <section>
-        <h2>Agregar preguntas por dominio</h2>
-        <div className="dominio-buttons">
-          {dominios.map((dominio) => {
-            const seleccionadas = preguntasPorDominio.get(dominio.codigo)?.length ?? 0;
-            const completo = seleccionadas === dominio.total_preguntas;
-            return (
-              <button
-                key={dominio.id}
-                onClick={() => handleAgregarDominio(dominio.codigo)}
-                disabled={completo}
-                title={dominio.nombre}
-              >
-                {dominio.codigo} ({seleccionadas}/{dominio.total_preguntas})
-              </button>
-            );
-          })}
+      <div className="card mb-4">
+        <div className="card-body">
+          <h2 className="h5">Agregar preguntas por dominio</h2>
+          <div className="d-flex gap-2 flex-wrap">
+            {dominios.map((dominio) => {
+              const seleccionadas = preguntasPorDominio.get(dominio.codigo)?.length ?? 0;
+              const completo = seleccionadas === dominio.total_preguntas;
+              return (
+                <button
+                  key={dominio.id}
+                  className={`btn btn-sm ${completo ? "btn-success" : "btn-outline-primary"}`}
+                  onClick={() => handleAgregarDominio(dominio.codigo)}
+                  disabled={completo}
+                  title={dominio.nombre}
+                >
+                  {completo && <i className="bi bi-check-lg me-1" />}
+                  {dominio.codigo} ({seleccionadas}/{dominio.total_preguntas})
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </section>
+      </div>
 
       {[...preguntasPorDominio.entries()].map(([dominioCodigo, preguntasDelDominio]) => (
-        <section key={dominioCodigo}>
-          <h2>{dominioCodigo}</h2>
-          <table className="preguntas-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Pregunta</th>
-                <th>Tier</th>
-                <th>Respuesta</th>
-                <th>Estado</th>
-                <th>Pts.</th>
-                <th>Riesgo Residual</th>
-                <th>Mitig. %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preguntasDelDominio.map((pregunta) => (
-                <tr key={pregunta.caso_pregunta_id}>
-                  <td>{pregunta.numero}</td>
-                  <td className="pregunta-texto">{pregunta.texto_es}</td>
-                  <td>{TIER_LABELS[pregunta.tier]}</td>
-                  <td>
-                    <select
-                      value={pregunta.respuesta}
-                      onChange={(e) => handleRespuestaChange(pregunta, e.target.value as RespuestaValor)}
-                    >
-                      {RESPUESTA_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {RESPUESTA_LABELS[opt]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{ESTADO_LABELS[pregunta.estado]}</td>
-                  <td>{pregunta.pts_obtenidos ?? "-"}</td>
-                  <td>{pregunta.riesgo_residual ?? "-"}</td>
-                  <td>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      defaultValue={pregunta.factor_mitigacion_pct ?? ""}
-                      onBlur={(e) => handleMitigacionCommit(pregunta, e.target.value)}
-                      className="mitigacion-input"
-                    />
-                  </td>
+        <div className="card mb-4" key={dominioCodigo}>
+          <div className="card-header fw-semibold">{dominioCodigo}</div>
+          <div className="table-responsive">
+            <table className="table table-hover mb-0 align-middle preguntas-table">
+              <thead className="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Pregunta</th>
+                  <th>Tier</th>
+                  <th>Respuesta</th>
+                  <th>Estado</th>
+                  <th>Pts.</th>
+                  <th>Riesgo Residual</th>
+                  <th>Mitig. %</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {preguntasDelDominio.map((pregunta) => (
+                  <tr key={pregunta.caso_pregunta_id}>
+                    <td>{pregunta.numero}</td>
+                    <td className="pregunta-texto">{pregunta.texto_es}</td>
+                    <td>{TIER_LABELS[pregunta.tier]}</td>
+                    <td>
+                      <select
+                        className="form-select form-select-sm"
+                        value={pregunta.respuesta}
+                        onChange={(e) => handleRespuestaChange(pregunta, e.target.value as RespuestaValor)}
+                      >
+                        {RESPUESTA_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {RESPUESTA_LABELS[opt]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{ESTADO_LABELS[pregunta.estado]}</td>
+                    <td>{pregunta.pts_obtenidos ?? "-"}</td>
+                    <td>{pregunta.riesgo_residual ?? "-"}</td>
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        defaultValue={pregunta.factor_mitigacion_pct ?? ""}
+                        onBlur={(e) => handleMitigacionCommit(pregunta, e.target.value)}
+                        className="form-control form-control-sm mitigacion-input"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ))}
-    </main>
+    </>
   );
 }
 
 function ScoreDashboard({ score }: { score: CasoScore }) {
   return (
-    <section>
-      <h2>Score</h2>
-      <div className={`score-card score-card--${score.global_score.semaforo}`}>
-        <strong>Global</strong>
-        <span>{formatPct(score.global_score.compliance_pct)} cumplimiento</span>
-        <span>{formatPct(score.global_score.residual_pct)} riesgo residual</span>
-        <span>{SEMAFORO_LABELS[score.global_score.semaforo]}</span>
-        <span>{formatPct(score.global_score.completitud_pct)} completitud</span>
-        <span>{score.global_score.brechas_criticas} brechas críticas</span>
+    <div className="mb-4">
+      <h2 className="h5">Score</h2>
+      <div className={`card mb-3 score-card score-card--${score.global_score.semaforo}`}>
+        <div className="card-body">
+          <h3 className="h6">Global</h3>
+          <div className="d-flex gap-4 flex-wrap">
+            <span>{formatPct(score.global_score.compliance_pct)} cumplimiento</span>
+            <span>{formatPct(score.global_score.residual_pct)} riesgo residual</span>
+            <span>{SEMAFORO_LABELS[score.global_score.semaforo]}</span>
+            <span>{formatPct(score.global_score.completitud_pct)} completitud</span>
+            <span>{score.global_score.brechas_criticas} brechas críticas</span>
+          </div>
+        </div>
       </div>
-      <div className="domain-cards">
+      <div className="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
         {score.dominios.map((d) => (
-          <div key={d.dominio_codigo} className={`score-card score-card--${d.semaforo}`}>
-            <strong>
-              {d.dominio_codigo} — {d.dominio_nombre}
-            </strong>
-            <span>{formatPct(d.compliance_pct)} cumplimiento</span>
-            <span>{formatPct(d.residual_pct)} riesgo residual</span>
-            <span>{SEMAFORO_LABELS[d.semaforo]}</span>
-            <span>
-              {d.respondidas}/{d.total_preguntas} respondidas
-            </span>
+          <div className="col" key={d.dominio_codigo}>
+            <div className={`card h-100 score-card score-card--${d.semaforo}`}>
+              <div className="card-body">
+                <h3 className="h6 mb-2">
+                  {d.dominio_codigo} — {d.dominio_nombre}
+                </h3>
+                <div className="small d-flex flex-column gap-1">
+                  <span>{formatPct(d.compliance_pct)} cumplimiento</span>
+                  <span>{formatPct(d.residual_pct)} riesgo residual</span>
+                  <span>{SEMAFORO_LABELS[d.semaforo]}</span>
+                  <span>
+                    {d.respondidas}/{d.total_preguntas} respondidas
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

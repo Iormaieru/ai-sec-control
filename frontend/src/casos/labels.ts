@@ -17,6 +17,14 @@ export const ESTADO_LABELS: Record<CasoEstado, string> = {
 // Espeja app/casos/service.py::ALLOWED_TRANSITIONS del backend — sólo para
 // no ofrecer en la UI un botón que el servidor va a rechazar; el backend
 // sigue siendo quien realmente valida la transición.
+export const ESTADO_BADGE_CLASS: Record<CasoEstado, string> = {
+  abierto: "text-bg-primary",
+  en_analisis: "text-bg-info",
+  esperando_proveedor: "text-bg-warning",
+  cerrado_aprobado: "text-bg-success",
+  rechazado: "text-bg-danger",
+};
+
 export const ALLOWED_TRANSITIONS: Record<CasoEstado, CasoEstado[]> = {
   abierto: ["en_analisis", "rechazado"],
   en_analisis: ["esperando_proveedor", "cerrado_aprobado", "rechazado"],
