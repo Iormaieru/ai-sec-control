@@ -76,7 +76,7 @@ dependencias.
   el resultado exacto, incluyendo el semáforo en cada umbral (80/60/40%).
   Depende de: T9.
 
-- [ ] **T11 — Scaffold frontend (React) + flujo de login**
+- [x] **T11 — Scaffold frontend (React) + flujo de login**
   Vite+React, cliente API tipado, ruteo, pantalla de login contra `POST /auth/login`,
   persistencia de sesión, rutas protegidas.
   Aceptación: `npm run build` sin errores; login manual contra el backend funciona.
