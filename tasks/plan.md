@@ -29,7 +29,7 @@ dependencias.
   Aceptación: migración aplica limpio sobre la base de T1.
   Depende de: T1, T2.
 
-- [ ] **T5 — Extracción y seed del catálogo maestro (138 preguntas)**
+- [x] **T5 — Extracción y seed del catálogo maestro (138 preguntas)**
   Script de extracción (openpyxl) desde
   `AISEC_PLOT4AI_Final -05-2026-Proveedor.xlsx` → `data/seed/catalogo_maestro.json`
   (artefacto versionado, no se relee el Excel en runtime). Loader que carga ese JSON a
