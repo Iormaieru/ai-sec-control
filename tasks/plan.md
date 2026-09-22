@@ -55,7 +55,7 @@ dependencias.
   1e-6); test de subconjunto parcial con denominador 0 → 0%, no excepción.
   Depende de: T6.
 
-- [ ] **T8 — Caso + Contacto (modelos, migración, CRUD)**
+- [x] **T8 — Caso + Contacto (modelos, migración, CRUD)**
   Modelos con AuditMixin, migración, endpoints `POST|GET /casos`, `GET|PATCH /casos/{id}`
   (transición de `estado` validada server-side), `POST|DELETE /casos/{id}/contactos`.
   Aceptación: tests de CRUD, transición de estado inválida rechazada (403/400), requiere auth.

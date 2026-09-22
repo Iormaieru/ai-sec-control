@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.auth.router import router as auth_router
+from app.casos.router import router as casos_router
 from app.core.config import get_settings
 
 
@@ -13,6 +14,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "environment": settings.environment}
 
     app.include_router(auth_router)
+    app.include_router(casos_router)
 
     return app
 
