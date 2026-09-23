@@ -146,3 +146,24 @@ agnóstica de todos modos (`LLMProvider` ABC).
   expandir una pregunta), botón "Descargar informe Word". Aceptación: build limpio + verificación
   manual de las llamadas HTTP contra el backend real (mismo método que T11-T13, no hay navegador
   headless en este entorno).
+
+---
+
+# Incremento 3 — Pentesting — Plan de tareas
+
+- [ ] **T20 — Catálogo de herramientas de pentesting**
+  `HerramientaPentest` (nombre, descripcion, url_referencia) + AuditMixin + migración. Endpoints
+  `POST|GET /pentesting/herramientas`, `PATCH|DELETE /pentesting/herramientas/{id}`. Aceptación:
+  tests de CRUD, requiere auth.
+
+- [ ] **T21 — Resultados de pentesting por caso**
+  `PentestResultado` (caso_id FK, herramienta_id FK, hallazgos, severidad enum
+  baja/media/alta/critica, fecha) + AuditMixin + migración. Endpoints anidados bajo caso:
+  `POST|GET /casos/{caso_id}/pentests`, `DELETE /casos/{caso_id}/pentests/{id}`. Aceptación: tests
+  de alta/listado/baja, referencia a herramienta inexistente -> 400.
+
+- [ ] **T22 — Frontend: Pentesting**
+  Activa el ítem "Pentesting" del menú lateral (hoy deshabilitado). Página de catálogo de
+  herramientas (alta + listado). Sección de resultados de pentesting en el detalle del caso (alta
+  + listado, con severidad coloreada). Aceptación: build limpio, verificación manual contra el
+  backend real (mismo método que incrementos anteriores).
