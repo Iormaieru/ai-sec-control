@@ -151,7 +151,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
 
 # Incremento 3 — Pentesting — Plan de tareas
 
-- [ ] **T20 — Catálogo de herramientas de pentesting**
+- [x] **T20 — Catálogo de herramientas de pentesting**
   `HerramientaPentest` (nombre, descripcion, url_referencia) + AuditMixin + migración. Endpoints
   `POST|GET /pentesting/herramientas`, `PATCH|DELETE /pentesting/herramientas/{id}`. Aceptación:
   tests de CRUD, requiere auth.
