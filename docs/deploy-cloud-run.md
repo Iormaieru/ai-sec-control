@@ -81,6 +81,34 @@ Los tests **no** usan esa base: siempre corren contra una base local `aisec_test
 (`localhost:5433` por defecto, o `AISEC_TEST_DATABASE_URL`) y se niegan a arrancar si esa URL apunta
 a un host que no sea local, porque truncan tablas.
 
+## 6. Logs (Cloud Logging → Dynatrace)
+
+El backend escribe **una línea JSON por evento en stdout**; Cloud Run la captura en Cloud Logging y
+Dynatrace la toma desde ahí. No hay agente ni SDK de Dynatrace en el código. Configuración
+(`AISEC_LOG_LEVEL`, `AISEC_LOG_FORMAT`, `AISEC_GCP_PROJECT_ID`) en `backend/.env.example`. Fuera de
+`development` el formato por defecto es JSON.
+
+| Campo | Contenido |
+|---|---|
+| `severity` | `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` |
+| `message` | nombre del evento: `request`, `request_failed`, `login_ok`, `login_failed`, `analisis_documento` |
+| `request_id` | uno por request; se devuelve al cliente en `X-Request-ID` y se respeta el entrante |
+| `trace_id`, `span_id` | de `X-Cloud-Trace-Context` (lo agrega Cloud Run) |
+| `logging.googleapis.com/trace` | sólo si `AISEC_GCP_PROJECT_ID` está definido; asocia el log con la traza en Cloud Logging |
+| `user_id` | usuario autenticado del request |
+| `http_method`, `http_path`, `http_route`, `http_status`, `duration_ms` | una línea `request` por request (`/health` no se loguea) |
+| `exception` | traceback completo en `request_failed`, en un único campo |
+
+**Qué no se loguea (a propósito):** contraseñas, tokens, headers de autorización, query strings,
+cuerpos de request/response y el texto de los documentos analizados (pueden ser confidenciales).
+`login_failed` incluye el `username` para poder alertar por intentos repetidos, ya que no hay
+límite de intentos en el login.
+
+**Falta del lado de la plataforma** (no se hace desde este repo): habilitar en Dynatrace la
+ingesta de logs de Google Cloud (integración GCP / exportación de Cloud Logging por un sink a
+Pub/Sub, según lo que tenga habilitado el equipo de Dynatrace) y armar ahí las alertas y
+dashboards. Conviene definir con ese equipo qué campos indexan como atributos.
+
 ## Pendiente fuera de este repo
 
 - Hosting del frontend (build estático de `frontend/`, con `VITE_API_URL` apuntando al servicio de

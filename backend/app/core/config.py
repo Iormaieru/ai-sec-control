@@ -25,6 +25,22 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 2
 
+    # Logging. Los logs salen por stdout: Cloud Run los captura en Cloud
+    # Logging y Dynatrace los toma desde ahí (integración con Google Cloud).
+    log_level: str = "INFO"
+    # "json" | "text". Sin definir: json fuera de development (lo que
+    # espera Cloud Logging/Dynatrace) y text legible en desarrollo.
+    log_format: str | None = None
+    # Opcional: con el ID del proyecto se emite logging.googleapis.com/trace
+    # para que Cloud Logging asocie cada log con la traza de su request.
+    gcp_project_id: str | None = None
+
+    @property
+    def effective_log_format(self) -> str:
+        if self.log_format:
+            return self.log_format
+        return "text" if self.environment == "development" else "json"
+
     @model_validator(mode="after")
     def _reject_weak_secrets_outside_development(self) -> "Settings":
         if self.environment != "development" and (

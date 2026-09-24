@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 
 from sqlalchemy import select
@@ -67,7 +68,21 @@ def analyze_document(
     catalogo = _catalog_summaries(db)
     imagenes = [DocumentImage(content=img.content, media_type=img.media_type) for img in extraido.images]
 
-    resultado = get_llm_provider().analyze_document(extraido.text, catalogo, imagenes)
+    provider = get_llm_provider()
+    started = time.perf_counter()
+    resultado = provider.analyze_document(extraido.text, catalogo, imagenes)
+    # Sólo metadatos: el texto del documento puede ser confidencial y no se loguea.
+    logger.info(
+        "analisis_documento",
+        extra={
+            "caso_id": str(caso.id),
+            "llm_provider": type(provider).__name__,
+            "documento_bytes": len(content),
+            "imagenes": len(imagenes),
+            "preguntas_recomendadas": len(resultado.preguntas_recomendadas),
+            "llm_duration_ms": round((time.perf_counter() - started) * 1000, 1),
+        },
+    )
 
     documento = CasoDocumento(
         caso_id=caso.id,
