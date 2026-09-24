@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { DashboardPage } from "./pages/DashboardPage";
 import { CasoDetailPage } from "./pages/CasoDetailPage";
 import { CasoPreguntasPage } from "./pages/CasoPreguntasPage";
 import { CasosPage } from "./pages/CasosPage";
@@ -39,6 +40,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <PentestingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboards"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
           </ProtectedRoute>
         }
       />

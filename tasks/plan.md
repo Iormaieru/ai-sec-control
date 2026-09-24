@@ -182,7 +182,7 @@ pregunta respondida (semáforo distinto de "sin evaluar").
   `GET /metricas?desde=&hasta=&tipo=` (app/metricas). Aceptación: tests con datos de varios
   períodos/tipos verificando cada agregación y los filtros; requiere auth.
 
-- [ ] **T24 — Frontend: Dashboard**
+- [x] **T24 — Frontend: Dashboard**
   Activa "Dashboards" en el menú lateral: filtros de período/tipo, tarjetas resumen, evolución
   mensual, distribución por tipo, tabla de modelados con % de riesgo y semáforo, pentestings por
   herramienta y por severidad.

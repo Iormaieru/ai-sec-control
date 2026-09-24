@@ -151,3 +151,46 @@ export interface PentestResultado {
   severidad: Severidad;
   fecha: string;
 }
+
+export interface PeriodoCantidad {
+  periodo: string;
+  cantidad: number;
+}
+
+export interface ModeladoCaso {
+  caso_id: string;
+  nombre_proyecto: string;
+  empresa_responsable: string;
+  tipo: CasoTipo;
+  compliance_pct: number;
+  residual_pct: number;
+  completitud_pct: number;
+  brechas_criticas: number;
+  semaforo: Semaforo;
+}
+
+export interface Metricas {
+  proyectos_ingresados: {
+    total: number;
+    por_tipo: Record<CasoTipo, number>;
+    por_mes: PeriodoCantidad[];
+  };
+  analisis: {
+    casos_analizados: number;
+    documentos_analizados: number;
+    por_tipo: Record<CasoTipo, number>;
+  };
+  modelados: {
+    cantidad: number;
+    promedio_compliance_pct: number | null;
+    promedio_residual_pct: number | null;
+    por_semaforo: Record<string, number>;
+    casos: ModeladoCaso[];
+  };
+  pentesting: {
+    total: number;
+    casos_con_pentest: number;
+    por_herramienta: { nombre: string; cantidad: number }[];
+    por_severidad: Record<Severidad, number>;
+  };
+}
