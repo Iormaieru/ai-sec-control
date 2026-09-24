@@ -167,3 +167,26 @@ agnóstica de todos modos (`LLMProvider` ABC).
   herramientas (alta + listado). Sección de resultados de pentesting en el detalle del caso (alta
   + listado, con severidad coloreada). Aceptación: build limpio, verificación manual contra el
   backend real (mismo método que incrementos anteriores).
+
+---
+
+# Incremento 4 — Dashboard de métricas — Plan de tareas
+
+Las 4 métricas mínimas de `proyecto.md` (Módulo 4), filtrables por período (desde/hasta) y tipo
+de caso: proyectos ingresados por período, análisis (de documento con IA) realizados, modelados
+de amenazas realizados con su % de riesgo resultante, y pentestings (cantidad, herramientas,
+resultados). Un modelado de amenazas cuenta como "realizado" cuando el caso tiene al menos una
+pregunta respondida (semáforo distinto de "sin evaluar").
+
+- [ ] **T23 — Endpoint de métricas**
+  `GET /metricas?desde=&hasta=&tipo=` (app/metricas). Aceptación: tests con datos de varios
+  períodos/tipos verificando cada agregación y los filtros; requiere auth.
+
+- [ ] **T24 — Frontend: Dashboard**
+  Activa "Dashboards" en el menú lateral: filtros de período/tipo, tarjetas resumen, evolución
+  mensual, distribución por tipo, tabla de modelados con % de riesgo y semáforo, pentestings por
+  herramienta y por severidad.
+
+- [ ] **T25 — Reporte trimestral (Word)**
+  `GET /metricas/export/docx?desde=&hasta=` con las mismas métricas, para el reporte de cada 3
+  meses que hoy se arma a mano. Botón de descarga en el dashboard.
