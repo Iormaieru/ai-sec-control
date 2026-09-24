@@ -1,12 +1,11 @@
-"""Guards the versioned seed artifact (data/seed/catalogo_maestro.json)
+"""Guards the versioned seed artifact (alembic/data/catalogo_maestro_v1.json)
 against silent drift from the source Excel: wrong counts here would mean
 every domain/global score computed downstream is wrong too."""
 
 import json
+from pathlib import Path
 
 import pytest
-
-from app.catalog.seed import DEFAULT_SEED_PATH
 
 EXPECTED_DOMAIN_COUNTS = {
     "DDG": 10,
@@ -30,11 +29,13 @@ EXPECTED_TIER_COUNTS = {
     "AHO": {"critico": 8, "alto": 5, "estandar": 0},
 }
 
+SEED_PATH = Path(__file__).resolve().parents[2] / "alembic" / "data" / "catalogo_maestro_v1.json"
+
 TIER_MULTIPLICADOR = {"critico": 3, "alto": 2, "estandar": 1}
 
 
 def _load_payload() -> dict:
-    return json.loads(DEFAULT_SEED_PATH.read_text(encoding="utf-8"))
+    return json.loads(SEED_PATH.read_text(encoding="utf-8"))
 
 
 def test_total_question_count_is_138() -> None:

@@ -1,11 +1,15 @@
-"""One-time extraction: reads the source PLOT4AI Excel workbook and writes
-data/seed/catalogo_maestro.json — a versioned, diffable artifact that the
-app loads at seed time (app/catalog/seed.py). The app never reads the .xlsx
-at runtime; re-run this script by hand if the source workbook changes.
+"""Extrae el catálogo del Excel PLOT4AI a un JSON — el insumo de una migración
+de datos (alembic/versions/8c55274c7ed7_* carga catalogo_maestro_v1.json).
+La app nunca lee el .xlsx en runtime.
 
-Usage: uv run python scripts/extract_catalog_from_excel.py
+El JSON de cada migración es un snapshot congelado: este script se niega a
+pisar un archivo existente. Para cambiar el catálogo, generar una versión
+nueva y escribir una migración que la aplique:
+
+    uv run python scripts/extract_catalog_from_excel.py --output alembic/data/catalogo_maestro_v2.json
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -14,7 +18,8 @@ import openpyxl
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 EXCEL_PATH = REPO_ROOT / "AISEC_PLOT4AI_Final -05-2026-Proveedor.xlsx"
-OUTPUT_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "catalogo_maestro.json"
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_OUTPUT = BACKEND_DIR / "alembic" / "data" / "catalogo_maestro_v1.json"
 
 CATALOGO_SHEET = "📋 Catálogo Maestro"
 PARAMETROS_SHEET = "⚙️ Parámetros"
@@ -133,6 +138,18 @@ def extract_preguntas(wb: openpyxl.Workbook, codigo_by_nombre: dict[str, str]) -
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    args = parser.parse_args()
+    output_path = args.output if args.output.is_absolute() else BACKEND_DIR / args.output
+    if output_path.exists():
+        print(
+            f"{output_path} ya existe y es el snapshot de una migración: no se pisa. "
+            "Usá --output con un nombre de versión nueva.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
     if not EXCEL_PATH.exists():
         print(f"No se encontró el Excel fuente: {EXCEL_PATH}", file=sys.stderr)
         raise SystemExit(1)
@@ -155,11 +172,11 @@ def main() -> None:
 
     payload = {"dominios": dominios, "preguntas": preguntas}
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False), encoding="utf-8"
     )
-    print(f"Escritas {len(dominios)} dominios y {len(preguntas)} preguntas en {OUTPUT_PATH}")
+    print(f"Escritas {len(dominios)} dominios y {len(preguntas)} preguntas en {output_path}")
 
 
 if __name__ == "__main__":

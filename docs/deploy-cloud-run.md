@@ -41,7 +41,7 @@ gcloud run deploy aisec-backend --source backend --region REGION \
 (2) conexiones. `max-instances × 7` debe quedar por debajo de `max_connections` de la instancia de
 Cloud SQL (depende del tier, verificalo con `SHOW max_connections;`; los tiers chicos son de decenas). Ajustá `--max-instances` o el pool según corresponda.
 
-## 4. Migraciones y datos iniciales (Cloud Run Jobs)
+## 4. Migraciones y primer admin (Cloud Run Jobs)
 
 Se usa la misma imagen, cambiando el comando. Correr **una vez por versión**, antes de que el nuevo
 código reciba tráfico — no al arrancar el servicio, para que varias instancias no migren en paralelo.
@@ -49,21 +49,14 @@ código reciba tráfico — no al arrancar el servicio, para que varias instanci
 ```bash
 IMG=$(gcloud run services describe aisec-backend --region REGION --format='value(spec.template.spec.containers[0].image)')
 
-# Migraciones (en cada release)
+# Migraciones (en cada release). En una base nueva esto también carga el catálogo de
+# 138 preguntas: es una migración de datos, no hace falta ningún paso aparte.
 gcloud run jobs create aisec-migrate --image "$IMG" --region REGION \
   --set-cloudsql-instances PROYECTO:REGION:INSTANCIA \
   --set-secrets AISEC_DATABASE_URL=aisec-database-url:latest,AISEC_JWT_SECRET=aisec-jwt-secret:latest \
   --set-env-vars AISEC_ENVIRONMENT=production \
   --command alembic --args upgrade,head
 gcloud run jobs execute aisec-migrate --region REGION --wait
-
-# Catálogo de 138 preguntas (una sola vez; se niega a correr si ya está cargado)
-gcloud run jobs create aisec-seed --image "$IMG" --region REGION \
-  --set-cloudsql-instances PROYECTO:REGION:INSTANCIA \
-  --set-secrets AISEC_DATABASE_URL=aisec-database-url:latest,AISEC_JWT_SECRET=aisec-jwt-secret:latest \
-  --set-env-vars AISEC_ENVIRONMENT=production \
-  --command python --args scripts/seed_catalog.py
-gcloud run jobs execute aisec-seed --region REGION --wait
 
 # Primer admin (una sola vez); la contraseña viene de un secreto
 printf '%s' '<clave-admin>' | gcloud secrets create aisec-admin-password --data-file=-

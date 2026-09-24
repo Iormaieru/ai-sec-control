@@ -1,12 +1,28 @@
+from collections.abc import Generator
+
 import pytest
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.catalog.models import Dominio, Polaridad, Pregunta, PreguntaTipo, Tier
+from app.db.session import engine
 
 
-def _make_dominio(db: Session, codigo: str = "CYB") -> Dominio:
-    dominio = Dominio(codigo=codigo, nombre="Cybersecurity", peso="0.22", total_preguntas=37)
+@pytest.fixture(autouse=True)
+def _cleanup_test_dominios() -> Generator[None, None, None]:
+    """El catálogo real viene de la migración y no se trunca entre tests:
+    estos tests usan dominios propios (código TST*) y los borran al terminar."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(
+            text("DELETE FROM preguntas WHERE dominio_id IN (SELECT id FROM dominios WHERE codigo LIKE 'TST%')")
+        )
+        conn.execute(text("DELETE FROM dominios WHERE codigo LIKE 'TST%'"))
+
+
+def _make_dominio(db: Session, codigo: str = "TST1") -> Dominio:
+    dominio = Dominio(codigo=codigo, nombre=f"Dominio de prueba {codigo}", peso="0.22", total_preguntas=37)
     db.add(dominio)
     db.commit()
     return dominio
@@ -27,12 +43,12 @@ def test_create_dominio_and_pregunta(db: Session) -> None:
     db.add(pregunta)
     db.commit()
 
-    assert pregunta.dominio.codigo == "CYB"
+    assert pregunta.dominio.codigo == "TST1"
     assert float(dominio.peso) == pytest.approx(0.22)
 
 
 def test_pregunta_numero_unique_within_dominio(db: Session) -> None:
-    dominio = _make_dominio(db, codigo="PRI")
+    dominio = _make_dominio(db, codigo="TST2")
     db.add(
         Pregunta(
             dominio_id=dominio.id,

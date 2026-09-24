@@ -29,7 +29,7 @@ TIER_MULTIPLICADOR = {Tier.CRITICO: 3, Tier.ALTO: 2, Tier.ESTANDAR: 1}
 
 class Dominio(AuditMixin, Base):
     """Uno de los 8 dominios PLOT4AI. Datos fijos, cargados una sola vez por
-    el seed (ver app/catalog/seed.py) desde el Catálogo Maestro del Excel."""
+    la migración de datos 8c55274c7ed7 desde el Catálogo Maestro del Excel."""
 
     __tablename__ = "dominios"
 
