@@ -232,3 +232,8 @@ body {
   max-height: 340px;
   overflow-y: auto;
 }
+
+.badge-orange {
+  background: #f08c3a;
+  color: #fff;
+}

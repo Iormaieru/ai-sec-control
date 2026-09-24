@@ -3,6 +3,7 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { CasoDetailPage } from "./pages/CasoDetailPage";
 import { CasoPreguntasPage } from "./pages/CasoPreguntasPage";
 import { CasosPage } from "./pages/CasosPage";
+import { PentestingPage } from "./pages/PentestingPage";
 import { LoginPage } from "./pages/LoginPage";
 
 export function App() {
@@ -30,6 +31,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <CasoPreguntasPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pentesting"
+        element={
+          <ProtectedRoute>
+            <PentestingPage />
           </ProtectedRoute>
         }
       />

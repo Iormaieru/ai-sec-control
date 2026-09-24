@@ -10,12 +10,12 @@ interface NavItem {
   disabled?: boolean;
 }
 
-// Los módulos de Pentesting y Dashboards todavía no están construidos
-// (Incrementos 3 y 4 del roadmap) — se muestran deshabilitados para que la
-// estructura completa del sistema sea visible desde ya.
+// Dashboards todavía no está construido (Incremento 4 del roadmap) — se
+// muestra deshabilitado para que la estructura completa del sistema sea
+// visible desde ya.
 const NAV_ITEMS: NavItem[] = [
   { to: "/casos", label: "Casos", icon: "bi-folder2-open" },
-  { to: "/pentesting", label: "Pentesting", icon: "bi-bug", disabled: true },
+  { to: "/pentesting", label: "Pentesting", icon: "bi-bug" },
   { to: "/dashboards", label: "Dashboards", icon: "bi-graph-up", disabled: true },
 ];
 

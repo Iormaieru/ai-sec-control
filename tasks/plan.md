@@ -162,7 +162,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   `POST|GET /casos/{caso_id}/pentests`, `DELETE /casos/{caso_id}/pentests/{id}`. Aceptación: tests
   de alta/listado/baja, referencia a herramienta inexistente -> 400.
 
-- [ ] **T22 — Frontend: Pentesting**
+- [x] **T22 — Frontend: Pentesting**
   Activa el ítem "Pentesting" del menú lateral (hoy deshabilitado). Página de catálogo de
   herramientas (alta + listado). Sección de resultados de pentesting en el detalle del caso (alta
   + listado, con severidad coloreada). Aceptación: build limpio, verificación manual contra el

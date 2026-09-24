@@ -132,3 +132,22 @@ export interface Dominio {
   peso: number;
   total_preguntas: number;
 }
+
+export type Severidad = "baja" | "media" | "alta" | "critica";
+
+export interface HerramientaPentest {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  url_referencia: string | null;
+}
+
+export interface PentestResultado {
+  id: string;
+  caso_id: string;
+  herramienta_id: string;
+  herramienta_nombre: string;
+  hallazgos: string;
+  severidad: Severidad;
+  fecha: string;
+}
