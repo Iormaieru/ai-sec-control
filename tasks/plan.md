@@ -178,7 +178,7 @@ de amenazas realizados con su % de riesgo resultante, y pentestings (cantidad, h
 resultados). Un modelado de amenazas cuenta como "realizado" cuando el caso tiene al menos una
 pregunta respondida (semáforo distinto de "sin evaluar").
 
-- [ ] **T23 — Endpoint de métricas**
+- [x] **T23 — Endpoint de métricas**
   `GET /metricas?desde=&hasta=&tipo=` (app/metricas). Aceptación: tests con datos de varios
   períodos/tipos verificando cada agregación y los filtros; requiere auth.
 
