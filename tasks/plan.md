@@ -156,7 +156,7 @@ agnóstica de todos modos (`LLMProvider` ABC).
   `POST|GET /pentesting/herramientas`, `PATCH|DELETE /pentesting/herramientas/{id}`. Aceptación:
   tests de CRUD, requiere auth.
 
-- [ ] **T21 — Resultados de pentesting por caso**
+- [x] **T21 — Resultados de pentesting por caso**
   `PentestResultado` (caso_id FK, herramienta_id FK, hallazgos, severidad enum
   baja/media/alta/critica, fecha) + AuditMixin + migración. Endpoints anidados bajo caso:
   `POST|GET /casos/{caso_id}/pentests`, `DELETE /casos/{caso_id}/pentests/{id}`. Aceptación: tests
