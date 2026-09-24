@@ -7,6 +7,7 @@ Run once per environment: `uv run python scripts/bootstrap_admin.py`.
 
 import argparse
 import getpass
+import os
 import sys
 from pathlib import Path
 
@@ -23,11 +24,16 @@ def main() -> None:
     parser.add_argument("--full-name", default=None)
     args = parser.parse_args()
 
-    password = getpass.getpass("Contraseña para el admin: ")
-    confirm = getpass.getpass("Confirmar contraseña: ")
-    if password != confirm:
-        print("Las contraseñas no coinciden.", file=sys.stderr)
-        raise SystemExit(1)
+    # Sin terminal (ej. un Cloud Run Job) no hay a quién pedirle la
+    # contraseña: se toma de AISEC_BOOTSTRAP_ADMIN_PASSWORD, que debería
+    # venir de un secreto y no quedar en el historial de un shell.
+    password = os.environ.get("AISEC_BOOTSTRAP_ADMIN_PASSWORD")
+    if password is None:
+        password = getpass.getpass("Contraseña para el admin: ")
+        confirm = getpass.getpass("Confirmar contraseña: ")
+        if password != confirm:
+            print("Las contraseñas no coinciden.", file=sys.stderr)
+            raise SystemExit(1)
 
     db = SessionLocal()
     try:

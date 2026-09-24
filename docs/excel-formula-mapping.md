@@ -44,4 +44,4 @@ esas funciones existan.
 ## Pesos y parámetros (hoja `⚙️ Parámetros`)
 
 Tabla de pesos, conteos y umbrales de semáforo transcripta en `docs/SPEC.md`. Fuente de verdad
-runtime: `data/seed/catalogo_maestro.json` (ver `backend/scripts/extract_catalog_from_excel.py`).
+runtime: `backend/data/seed/catalogo_maestro.json` (ver `scripts/extract_catalog_from_excel.py`).

@@ -1,30 +1,28 @@
 """Runs before any other conftest or test module. Points the test session at
-a dedicated `aisec_test` database instead of the dev database configured in
-backend/.env — otherwise every test run truncates the same tables a human
-is using for manual/demo purposes (which is exactly what happened once and
-is why this file exists). Must set the env var before `app.core.config`'s
+a dedicated local `aisec_test` database — never at whatever backend/.env
+points to. Two reasons: (1) every test truncates tables, which once wiped
+the dev data a human was using; (2) with a managed database (Cloud SQL) in
+backend/.env, running the suite would create and truncate a test database
+inside that instance. Must set the env var before `app.core.config`'s
 Settings are ever instantiated (they're cached via lru_cache on first use).
+
+Override with AISEC_TEST_DATABASE_URL; it must point to a local host.
 """
 
 import os
-import re
 
-_dev_url = os.environ.get("AISEC_DATABASE_URL")
-if _dev_url is None:
-    # Ningún AISEC_DATABASE_URL en el entorno: leer backend/.env a mano
-    # (pydantic-settings todavía no se importó) sólo para derivar la URL de
-    # test a partir de la de dev, sin adivinar host/usuario/contraseña.
-    from pathlib import Path
+from sqlalchemy.engine import make_url
 
-    env_path = Path(__file__).resolve().parent.parent / ".env"
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            if line.startswith("AISEC_DATABASE_URL="):
-                _dev_url = line.split("=", 1)[1].strip()
-                break
+DEFAULT_LOCAL_TEST_URL = "postgresql+psycopg://aisec:aisec@localhost:5433/aisec_test"
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "db"}
 
-_dev_url = _dev_url or "postgresql+psycopg://aisec:aisec@localhost:5433/aisec"
-_test_url = re.sub(r"/([^/]+)$", "/aisec_test", _dev_url)
+_test_url = os.environ.get("AISEC_TEST_DATABASE_URL", DEFAULT_LOCAL_TEST_URL)
+if make_url(_test_url).host not in LOCAL_HOSTS:
+    raise RuntimeError(
+        "AISEC_TEST_DATABASE_URL debe apuntar a una base local (localhost/127.0.0.1/db): "
+        "los tests truncan tablas y crean la base de test, no deben correr contra "
+        f"una instancia remota o administrada. Recibido: {make_url(_test_url).host!r}"
+    )
 os.environ["AISEC_DATABASE_URL"] = _test_url
 
 
@@ -36,8 +34,9 @@ from sqlalchemy.exc import ProgrammingError  # noqa: E402
 
 
 def _ensure_test_database_exists(test_url: str) -> None:
-    admin_url = re.sub(r"/[^/]+$", "/postgres", test_url)
-    db_name = test_url.rsplit("/", 1)[-1]
+    url = make_url(test_url)
+    admin_url = url.set(database="postgres")
+    db_name = url.database
     engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
         with engine.connect() as conn:

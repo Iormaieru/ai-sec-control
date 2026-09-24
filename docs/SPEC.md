@@ -43,7 +43,7 @@ ai-sec-control/
   backend/tests/unit/test_scoring.py   # tests "golden" contra el Excel
   frontend/src/
     features/{auth,casos,threat-model,pentesting,dashboards}/
-  data/seed/catalogo_maestro.json      # extracción versionada del Excel (138 preguntas)
+  backend/data/seed/catalogo_maestro.json      # extracción versionada del Excel (138 preguntas)
   docker-compose.yml                   # postgres + backend + frontend
 ```
 
@@ -131,7 +131,7 @@ construye recién en el Incremento 4, pero el punto de enganche (transición de 
   `fecha_objetivo`, `evidencia_esperada`, `observaciones` + AuditMixin (columnas M-U del Excel;
   I/J/K/L/O son calculadas, no se guardan).
 
-**Seed del catálogo**: extracción única del Excel a `data/seed/catalogo_maestro.json`
+**Seed del catálogo**: extracción única del Excel a `backend/data/seed/catalogo_maestro.json`
 (versionado, revisable), cargado por migración/script — el runtime nunca vuelve a leer el .xlsx.
 Test de integridad: 138 preguntas totales, conteo por dominio (10/7/18/37/25/15/13/13), pesos
 suman 1.00, `multiplicador` coherente con `tier`.

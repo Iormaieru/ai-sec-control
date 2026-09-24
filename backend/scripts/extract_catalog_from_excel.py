@@ -14,7 +14,7 @@ import openpyxl
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 EXCEL_PATH = REPO_ROOT / "AISEC_PLOT4AI_Final -05-2026-Proveedor.xlsx"
-OUTPUT_PATH = REPO_ROOT / "data" / "seed" / "catalogo_maestro.json"
+OUTPUT_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "catalogo_maestro.json"
 
 CATALOGO_SHEET = "📋 Catálogo Maestro"
 PARAMETROS_SHEET = "⚙️ Parámetros"

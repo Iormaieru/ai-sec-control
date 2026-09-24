@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.catalog.models import Dominio, Polaridad, Pregunta, PreguntaTipo, Tier
 
-DEFAULT_SEED_PATH = Path(__file__).resolve().parents[3] / "data" / "seed" / "catalogo_maestro.json"
+DEFAULT_SEED_PATH = Path(__file__).resolve().parents[2] / "data" / "seed" / "catalogo_maestro.json"
 
 
 def load_catalog(db: Session, path: Path = DEFAULT_SEED_PATH) -> None:
