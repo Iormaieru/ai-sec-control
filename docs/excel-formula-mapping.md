@@ -44,4 +44,4 @@ esas funciones existan.
 ## Pesos y parámetros (hoja `⚙️ Parámetros`)
 
 Tabla de pesos, conteos y umbrales de semáforo transcripta en `docs/SPEC.md`. Fuente de verdad
-runtime: `backend/alembic/data/catalogo_maestro_v1.json` (ver `scripts/extract_catalog_from_excel.py`).
+runtime: `backend/alembic/data/catalogo_maestro_v1.json` (extraído una única vez del Excel; desde ahí el catálogo se mantiene como JSON + migraciones de Alembic).

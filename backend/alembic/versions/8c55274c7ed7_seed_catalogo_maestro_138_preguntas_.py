@@ -1,8 +1,8 @@
 """seed catalogo maestro (138 preguntas PLOT4AI)
 
 Carga los 8 dominios y las 138 preguntas del catálogo PLOT4AI desde el
-snapshot congelado alembic/data/catalogo_maestro_v1.json (extraído del Excel
-con scripts/extract_catalog_from_excel.py). Migración de datos: `alembic
+snapshot congelado alembic/data/catalogo_maestro_v1.json (extraído una única vez
+del Excel PLOT4AI original). Migración de datos: `alembic
 upgrade head` deja una base nueva lista para usar, sin un paso manual aparte.
 
 - Independiente de los modelos de la app (tablas mínimas definidas acá): si
@@ -10,8 +10,8 @@ upgrade head` deja una base nueva lista para usar, sin un paso manual aparte.
 - Idempotente (ON CONFLICT DO NOTHING): en una base que ya tenía el catálogo
   (cargado a mano antes de que existiera esta migración) no duplica ni pisa.
 - El JSON es un snapshot por versión: para cambiar el catálogo no se edita
-  este archivo ni esta migración, se genera catalogo_maestro_v2.json y se
-  agrega una migración nueva.
+  este archivo ni esta migración: se agrega catalogo_maestro_v2.json (a mano,
+  el Excel ya no es la fuente) y una migración nueva que lo aplique.
 
 Revision ID: 8c55274c7ed7
 Revises: 6b22b2fcfd06

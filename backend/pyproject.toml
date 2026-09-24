@@ -7,7 +7,6 @@ dependencies = [
     "alembic>=1.20.0",
     "fastapi>=0.141.1",
     "openai>=3.18.0",
-    "openpyxl>=3.1.5",
     "passlib[argon2]>=1.7.4",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.15.0",

@@ -30,10 +30,11 @@ dependencias.
   Depende de: T1, T2.
 
 - [x] **T5 — Extracción y seed del catálogo maestro (138 preguntas)**
-  Script de extracción (openpyxl) desde
-  `AISEC_PLOT4AI_Final -05-2026-Proveedor.xlsx` → `backend/alembic/data/catalogo_maestro_v1.json`
-  (artefacto versionado, no se relee el Excel en runtime). Loader que carga ese JSON a
-  `Dominio`/`Pregunta`.
+  Extracción única desde `AISEC_PLOT4AI_Final -05-2026-Proveedor.xlsx` →
+  `backend/alembic/data/catalogo_maestro_v1.json` (snapshot versionado, no se relee el Excel en
+  runtime) y migración de datos de Alembic que lo carga a `Dominio`/`Pregunta`. (Al principio fue
+  un script + loader; se pasó a migración, y el script de extracción se eliminó: el catálogo ahora
+  se mantiene como JSON + migraciones.)
   Aceptación: tests de integridad — 138 preguntas totales, conteo por dominio
   (10/7/18/37/25/15/13/13), pesos suman 1.00, `multiplicador` coherente con `tier` (crítico=3,
   alto=2, estándar=1).
