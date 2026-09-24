@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, fetchBlob } from "./client";
 import type { CasoTipo, Metricas } from "./types";
 
 export interface MetricasFilters {
@@ -18,4 +18,16 @@ export function metricasQuery(filters: MetricasFilters): string {
 
 export function getMetricas(filters: MetricasFilters = {}): Promise<Metricas> {
   return api.get<Metricas>(`/metricas${metricasQuery(filters)}`);
+}
+
+export async function downloadReporteMetricas(filters: MetricasFilters): Promise<void> {
+  const blob = await fetchBlob(`/metricas/export/docx${metricasQuery(filters)}`);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "reporte-metricas.docx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

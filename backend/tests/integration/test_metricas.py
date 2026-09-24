@@ -171,3 +171,46 @@ def test_pentesting_agrega_por_herramienta_y_severidad(
 
 def test_metricas_requiere_auth(client: TestClient) -> None:
     assert client.get("/metricas").status_code == 401
+
+
+def _docx_text(content: bytes) -> str:
+    document = Document(io.BytesIO(content))
+    parts = [p.text for p in document.paragraphs]
+    for table in document.tables:
+        for row in table.rows:
+            parts.extend(cell.text for cell in row.cells)
+    return "\n".join(parts)
+
+
+def test_export_docx_del_reporte(client: TestClient, auth_headers: dict[str, str]) -> None:
+    caso = _caso(client, auth_headers, "ingresado", "Proyecto reportado")
+    burp = client.post("/pentesting/herramientas", json={"nombre": "Burp"}, headers=auth_headers).json()
+    client.post(
+        f"/casos/{caso['id']}/pentests",
+        json={"herramienta_id": burp["id"], "hallazgos": "x", "severidad": "alta", "fecha": "2026-03-01"},
+        headers=auth_headers,
+    )
+
+    r = client.get(
+        "/metricas/export/docx", params={"desde": "2026-01-01", "hasta": "2026-12-31"}, headers=auth_headers
+    )
+
+    assert r.status_code == 200
+    assert "wordprocessingml" in r.headers["content-type"]
+    assert "attachment" in r.headers["content-disposition"]
+    texto = _docx_text(r.content)
+    assert "Reporte de métricas" in texto
+    assert "2026-01-01 a 2026-12-31" in texto
+    assert "Burp" in texto
+    assert "Ingresado" in texto
+
+
+def test_export_docx_sin_datos_no_falla(client: TestClient, auth_headers: dict[str, str]) -> None:
+    r = client.get("/metricas/export/docx", headers=auth_headers)
+
+    assert r.status_code == 200
+    assert "Sin pentestings en el período." in _docx_text(r.content)
+
+
+def test_export_docx_requiere_auth(client: TestClient) -> None:
+    assert client.get("/metricas/export/docx").status_code == 401

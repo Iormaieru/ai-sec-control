@@ -187,6 +187,6 @@ pregunta respondida (semáforo distinto de "sin evaluar").
   mensual, distribución por tipo, tabla de modelados con % de riesgo y semáforo, pentestings por
   herramienta y por severidad.
 
-- [ ] **T25 — Reporte trimestral (Word)**
+- [x] **T25 — Reporte trimestral (Word)**
   `GET /metricas/export/docx?desde=&hasta=` con las mismas métricas, para el reporte de cada 3
   meses que hoy se arma a mano. Botón de descarga en el dashboard.

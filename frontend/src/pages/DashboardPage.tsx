@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { getMetricas, type MetricasFilters } from "../api/metricas";
+import { downloadReporteMetricas, getMetricas, type MetricasFilters } from "../api/metricas";
 import { ApiError } from "../api/client";
 import type { CasoTipo, Metricas, Severidad } from "../api/types";
 import { TIPO_LABELS } from "../casos/labels";
@@ -28,7 +28,19 @@ export function DashboardPage() {
 
   return (
     <>
-      <h1 className="h3 mb-3">Dashboard de métricas</h1>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h1 className="h3 mb-0">Dashboard de métricas</h1>
+        <button
+          className="btn btn-outline-primary"
+          onClick={() =>
+            downloadReporteMetricas(filters).catch((err) =>
+              setError(err instanceof ApiError ? err.detail : "No se pudo descargar el reporte"),
+            )
+          }
+        >
+          <i className="bi bi-file-earmark-word me-1" /> Descargar reporte Word
+        </button>
+      </div>
 
       <div className="row g-2 mb-4 align-items-end">
         <div className="col-auto">
