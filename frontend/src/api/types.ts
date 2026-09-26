@@ -142,14 +142,91 @@ export interface HerramientaPentest {
   url_referencia: string | null;
 }
 
-export interface PentestResultado {
+export interface HerramientaRef {
+  id: string;
+  nombre: string;
+}
+
+export type CategoriaEstandar = "llm" | "machine_learning" | "deep_learning" | "red_teaming" | "web" | "otro";
+export type EstadoPentest = "planificado" | "en_curso" | "finalizado";
+export type ResultadoAtaque = "vulnerable" | "no_vulnerable" | "no_concluyente";
+export type EstadoCobertura = "sin_probar" | ResultadoAtaque;
+
+export interface PasoEstandar {
+  id: string;
+  orden: number;
+  codigo: string | null;
+  titulo: string;
+  descripcion: string | null;
+  procedimiento: string | null;
+}
+
+export interface EstandarResumen {
+  id: string;
+  codigo: string;
+  nombre: string;
+  categoria: CategoriaEstandar;
+  version: string | null;
+  descripcion: string | null;
+  url_referencia: string | null;
+  cantidad_pasos: number;
+}
+
+export interface Estandar extends EstandarResumen {
+  pasos: PasoEstandar[];
+}
+
+export interface Ataque {
+  id: string;
+  pentest_id: string;
+  paso_id: string | null;
+  paso_codigo: string | null;
+  paso_titulo: string | null;
+  nombre: string;
+  descripcion: string | null;
+  herramientas: HerramientaRef[];
+  resultado: ResultadoAtaque;
+  severidad: Severidad | null;
+  hallazgos: string | null;
+  recomendacion: string | null;
+  fecha: string;
+}
+
+export interface CoberturaPaso {
+  paso_id: string;
+  orden: number;
+  codigo: string | null;
+  titulo: string;
+  ataques: number;
+  vulnerables: number;
+  estado: EstadoCobertura;
+}
+
+export interface PentestResumen {
   id: string;
   caso_id: string;
-  herramienta_id: string;
-  herramienta_nombre: string;
-  hallazgos: string;
-  severidad: Severidad;
-  fecha: string;
+  caso_nombre: string;
+  empresa_responsable: string;
+  estandar_id: string;
+  estandar_codigo: string;
+  estandar_nombre: string;
+  estandar_categoria: CategoriaEstandar;
+  nombre: string;
+  estado: EstadoPentest;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  responsable: string | null;
+  cantidad_ataques: number;
+  cantidad_vulnerables: number;
+  pasos_probados: number;
+  pasos_totales: number;
+}
+
+export interface Pentest extends PentestResumen {
+  alcance: string | null;
+  ataques: Ataque[];
+  cobertura: CoberturaPaso[];
+  ataques_sin_paso: number;
 }
 
 export interface PeriodoCantidad {
@@ -190,7 +267,12 @@ export interface Metricas {
   pentesting: {
     total: number;
     casos_con_pentest: number;
-    por_herramienta: { nombre: string; cantidad: number }[];
+    por_estado: Record<EstadoPentest, number>;
+    por_estandar: { nombre: string; cantidad: number }[];
+    ataques_total: number;
+    por_resultado: Record<ResultadoAtaque, number>;
+    vulnerabilidades: number;
     por_severidad: Record<Severidad, number>;
+    por_herramienta: { nombre: string; cantidad: number }[];
   };
 }

@@ -4,7 +4,11 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { CasoDetailPage } from "./pages/CasoDetailPage";
 import { CasoPreguntasPage } from "./pages/CasoPreguntasPage";
 import { CasosPage } from "./pages/CasosPage";
-import { PentestingPage } from "./pages/PentestingPage";
+import { EstandarDetailPage } from "./pages/pentesting/EstandarDetailPage";
+import { EstandaresPage } from "./pages/pentesting/EstandaresPage";
+import { HerramientasPage } from "./pages/pentesting/HerramientasPage";
+import { PentestDetailPage } from "./pages/pentesting/PentestDetailPage";
+import { PentestsPage } from "./pages/pentesting/PentestsPage";
 import { LoginPage } from "./pages/LoginPage";
 
 export function App() {
@@ -35,11 +39,44 @@ export function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/pentesting" element={<Navigate to="/pentesting/gestion" replace />} />
       <Route
-        path="/pentesting"
+        path="/pentesting/gestion"
         element={
           <ProtectedRoute>
-            <PentestingPage />
+            <PentestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pentesting/gestion/:pentestId"
+        element={
+          <ProtectedRoute>
+            <PentestDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pentesting/estandares"
+        element={
+          <ProtectedRoute>
+            <EstandaresPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pentesting/estandares/:estandarId"
+        element={
+          <ProtectedRoute>
+            <EstandarDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pentesting/herramientas"
+        element={
+          <ProtectedRoute>
+            <HerramientasPage />
           </ProtectedRoute>
         }
       />

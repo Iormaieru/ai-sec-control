@@ -207,5 +207,5 @@ estándar, con varias herramientas por ataque. Reemplaza `pentest_resultados` (v
 - [x] **T28 — API de estándares** (lectura para todos, escritura solo admin).
 - [x] **T29 — API de gestión de pentests y ataques** (cobertura por paso, validaciones).
 - [x] **T30 — Métricas y reporte** sobre pentests/ataques/vulnerabilidades.
-- [ ] **T31 — Frontend**: Pentesting con tres sectores (Herramientas, Estándares, Gestión) y
+- [x] **T31 — Frontend**: Pentesting con tres sectores (Herramientas, Estándares, Gestión) y
   pentests del proyecto en el detalle del caso.

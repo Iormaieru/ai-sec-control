@@ -2,9 +2,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { downloadReporteMetricas, getMetricas, type MetricasFilters } from "../api/metricas";
 import { ApiError } from "../api/client";
-import type { CasoTipo, Metricas, Severidad } from "../api/types";
+import type { CasoTipo, EstadoPentest, Metricas, ResultadoAtaque, Severidad } from "../api/types";
 import { TIPO_LABELS } from "../casos/labels";
-import { SEVERIDAD_BADGE_CLASS, SEVERIDAD_LABELS } from "../pentesting/labels";
+import {
+  ESTADO_PENTEST_LABELS,
+  RESULTADO_LABELS,
+  SEVERIDAD_BADGE_CLASS,
+  SEVERIDAD_LABELS,
+} from "../pentesting/labels";
 import { SEMAFORO_LABELS, formatPct } from "../threatModel/labels";
 
 export function DashboardPage() {
@@ -127,6 +132,7 @@ function DashboardContent({ metricas }: { metricas: Metricas }) {
   const { proyectos_ingresados: pi, analisis, modelados, pentesting } = metricas;
   const maxMes = Math.max(0, ...pi.por_mes.map((m) => m.cantidad));
   const maxHerramienta = Math.max(0, ...pentesting.por_herramienta.map((h) => h.cantidad));
+  const maxEstandar = Math.max(0, ...pentesting.por_estandar.map((e) => e.cantidad));
 
   return (
     <>
@@ -147,9 +153,9 @@ function DashboardContent({ metricas }: { metricas: Metricas }) {
           }
         />
         <StatCard
-          label="Pentestings"
+          label="Pentests"
           value={pentesting.total}
-          hint={`en ${pentesting.casos_con_pentest} caso(s)`}
+          hint={`en ${pentesting.casos_con_pentest} proyecto(s) · ${pentesting.vulnerabilidades} vulnerabilidad(es)`}
         />
       </div>
 
@@ -244,13 +250,47 @@ function DashboardContent({ metricas }: { metricas: Metricas }) {
         </div>
       </div>
 
+      <div className="row g-3 mb-4">
+        <div className="col-lg-4">
+          <div className="card h-100">
+            <div className="card-body">
+              <h2 className="h5">Pentests por estado</h2>
+              <table className="table table-sm mb-0">
+                <tbody>
+                  {(Object.keys(ESTADO_PENTEST_LABELS) as EstadoPentest[]).map((e) => (
+                    <tr key={e}>
+                      <td>{ESTADO_PENTEST_LABELS[e]}</td>
+                      <td className="text-end">{pentesting.por_estado[e]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-8">
+          <div className="card h-100">
+            <div className="card-body">
+              <h2 className="h5">Pentests por estándar</h2>
+              {pentesting.por_estandar.length === 0 ? (
+                <p className="text-muted mb-0">Sin pentests en el período.</p>
+              ) : (
+                pentesting.por_estandar.map((e) => (
+                  <BarRow key={e.nombre} label={e.nombre} value={e.cantidad} max={maxEstandar} />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="row g-3">
         <div className="col-lg-6">
           <div className="card h-100">
             <div className="card-body">
-              <h2 className="h5">Pentestings por herramienta</h2>
+              <h2 className="h5">Ataques por herramienta</h2>
               {pentesting.por_herramienta.length === 0 ? (
-                <p className="text-muted mb-0">Sin pentestings en el período.</p>
+                <p className="text-muted mb-0">Sin ataques con herramientas en el período.</p>
               ) : (
                 pentesting.por_herramienta.map((h) => (
                   <BarRow key={h.nombre} label={h.nombre} value={h.cantidad} max={maxHerramienta} />
@@ -262,7 +302,14 @@ function DashboardContent({ metricas }: { metricas: Metricas }) {
         <div className="col-lg-6">
           <div className="card h-100">
             <div className="card-body">
-              <h2 className="h5">Resultados por severidad</h2>
+              <h2 className="h5">Resultado de los ataques</h2>
+              <p className="small text-muted mb-2">
+                {pentesting.ataques_total} ataque(s):{" "}
+                {(Object.keys(RESULTADO_LABELS) as ResultadoAtaque[])
+                  .map((r) => `${pentesting.por_resultado[r]} ${RESULTADO_LABELS[r].toLowerCase()}`)
+                  .join(" · ")}
+              </p>
+              <h3 className="h6">Vulnerabilidades por severidad</h3>
               <div className="d-flex gap-3 flex-wrap">
                 {(Object.keys(SEVERIDAD_LABELS) as Severidad[]).map((s) => (
                   <div key={s} className="text-center">

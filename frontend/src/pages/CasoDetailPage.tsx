@@ -4,7 +4,7 @@ import { addContacto, getCaso, removeContacto, updateCaso } from "../api/casos";
 import { ApiError } from "../api/client";
 import type { Caso, CasoEstado } from "../api/types";
 import { ALLOWED_TRANSITIONS, ESTADO_BADGE_CLASS, ESTADO_LABELS, TIPO_LABELS } from "../casos/labels";
-import { PentestResultadosSection } from "./PentestResultadosSection";
+import { CasoPentestsSection } from "../pentesting/CasoPentestsSection";
 
 export function CasoDetailPage() {
   const { casoId } = useParams<{ casoId: string }>();
@@ -91,7 +91,7 @@ export function CasoDetailPage() {
 
       <ContactosSection caso={caso} onChanged={reload} />
 
-      <PentestResultadosSection casoId={caso.id} />
+      <CasoPentestsSection casoId={caso.id} />
 
       <div className="card">
         <div className="card-body d-flex justify-content-between align-items-center">
