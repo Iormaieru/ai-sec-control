@@ -46,6 +46,16 @@ def catalog_loaded(db: Session) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _cleanup_test_estandares() -> Generator[None, None, None]:
+    """Los estándares sembrados por migración no se truncan (igual que el
+    catálogo PLOT4AI); los que crean los tests usan código TST-* y se borran."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM pentests WHERE estandar_id IN (SELECT id FROM pentest_estandares WHERE codigo LIKE 'TST-%')"))
+        conn.execute(text("DELETE FROM pentest_estandares WHERE codigo LIKE 'TST-%'"))
+
+
+@pytest.fixture(autouse=True)
 def _reset_users_and_audit_log() -> Generator[None, None, None]:
     yield
     with engine.begin() as conn:
@@ -53,6 +63,15 @@ def _reset_users_and_audit_log() -> Generator[None, None, None]:
             text(
                 "TRUNCATE TABLE users, audit_log, casos, contactos, "
                 "caso_preguntas, caso_respuestas, caso_documentos, herramientas_pentest, "
-                "pentest_resultados RESTART IDENTITY CASCADE"
+                "pentests, pentest_ataques, pentest_ataque_herramientas RESTART IDENTITY CASCADE"
             )
         )
+
+
+@pytest.fixture
+def admin_headers(db: Session, client: TestClient) -> dict[str, str]:
+    from app.auth.models import UserRole
+
+    create_user(db, username="test-admin", password="test-admin-pass", role=UserRole.ADMIN)
+    response = client.post("/auth/login", data={"username": "test-admin", "password": "test-admin-pass"})
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}

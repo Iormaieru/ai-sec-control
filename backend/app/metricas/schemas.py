@@ -46,10 +46,15 @@ class Modelados(BaseModel):
 
 
 class Pentesting(BaseModel):
-    total: int
+    total: int  # pentests en el período (por fecha de inicio)
     casos_con_pentest: int
-    por_herramienta: list[NombreCantidad]
-    por_severidad: dict[str, int]
+    por_estado: dict[str, int]
+    por_estandar: list[NombreCantidad]
+    ataques_total: int
+    por_resultado: dict[str, int]
+    vulnerabilidades: int
+    por_severidad: dict[str, int]  # sólo ataques con resultado vulnerable
+    por_herramienta: list[NombreCantidad]  # ataques en los que se usó cada herramienta
 
 
 class MetricasOut(BaseModel):

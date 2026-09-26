@@ -20,6 +20,7 @@ SEMAFORO_LABELS = {
     "critico": "Crítico",
 }
 SEVERIDAD_LABELS = {"baja": "Baja", "media": "Media", "alta": "Alta", "critica": "Crítica"}
+ESTADO_PENTEST_LABELS = {"planificado": "Planificado", "en_curso": "En curso", "finalizado": "Finalizado"}
 
 
 def _pct(value: float) -> str:
@@ -103,16 +104,32 @@ def build_metricas_report(
 
     document.add_heading("Pentesting", level=1)
     if pe.total:
-        document.add_paragraph(f"{pe.total} resultado(s) en {pe.casos_con_pentest} caso(s).")
-        _table(document, ["Herramienta", "Resultados"], [[h.nombre, str(h.cantidad)] for h in pe.por_herramienta])
+        document.add_paragraph(
+            f"{pe.total} pentest(s) en {pe.casos_con_pentest} proyecto(s): {pe.ataques_total} ataque(s) "
+            f"realizados, {pe.vulnerabilidades} con resultado vulnerable."
+        )
+        _table(
+            document,
+            ["Estado", "Pentests"],
+            [[ESTADO_PENTEST_LABELS[e], str(pe.por_estado[e])] for e in ESTADO_PENTEST_LABELS],
+        )
+        document.add_paragraph("")
+        _table(document, ["Estándar", "Pentests"], [[e.nombre, str(e.cantidad)] for e in pe.por_estandar])
+        if pe.por_herramienta:
+            document.add_paragraph("")
+            _table(
+                document,
+                ["Herramienta", "Ataques en que se usó"],
+                [[h.nombre, str(h.cantidad)] for h in pe.por_herramienta],
+            )
         document.add_paragraph("")
         _table(
             document,
-            ["Severidad", "Resultados"],
+            ["Severidad (ataques vulnerables)", "Cantidad"],
             [[SEVERIDAD_LABELS[s], str(pe.por_severidad[s])] for s in SEVERIDAD_LABELS],
         )
     else:
-        document.add_paragraph("Sin pentestings en el período.")
+        document.add_paragraph("Sin pentests en el período.")
 
     buffer = io.BytesIO()
     document.save(buffer)

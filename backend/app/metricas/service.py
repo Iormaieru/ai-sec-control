@@ -15,7 +15,16 @@ from app.metricas.schemas import (
     PeriodoCantidad,
     ProyectosIngresados,
 )
-from app.pentesting.models import HerramientaPentest, PentestResultado, Severidad
+from app.pentesting.models import (
+    EstadoPentest,
+    HerramientaPentest,
+    Pentest,
+    PentestAtaque,
+    PentestEstandar,
+    ResultadoAtaque,
+    Severidad,
+    pentest_ataque_herramientas,
+)
 from app.threat_model.scoring import SEMAFORO_SIN_EVALUAR
 from app.threat_model.service import get_caso_score
 
@@ -102,38 +111,72 @@ def _pentesting(
 ) -> Pentesting:
     filters = []
     if desde is not None:
-        filters.append(PentestResultado.fecha >= desde)
+        filters.append(Pentest.fecha_inicio >= desde)
     if hasta is not None:
-        filters.append(PentestResultado.fecha <= hasta)
+        filters.append(Pentest.fecha_inicio <= hasta)
     if tipo is not None:
         filters.append(Caso.tipo == tipo)
 
-    def base(*columns):
-        return select(*columns).select_from(PentestResultado).join(
-            Caso, PentestResultado.caso_id == Caso.id
-        ).where(*filters)
-
-    total = db.scalar(base(func.count(PentestResultado.id))) or 0
-    casos_con_pentest = db.scalar(base(func.count(func.distinct(PentestResultado.caso_id)))) or 0
-
-    por_herramienta_rows = db.execute(
-        base(HerramientaPentest.nombre, func.count(PentestResultado.id))
-        .join(HerramientaPentest, PentestResultado.herramienta_id == HerramientaPentest.id)
-        .group_by(HerramientaPentest.nombre)
-        .order_by(func.count(PentestResultado.id).desc(), HerramientaPentest.nombre)
+    pentests = db.execute(
+        select(Pentest.id, Pentest.caso_id, Pentest.estado, PentestEstandar.nombre)
+        .join(Caso, Pentest.caso_id == Caso.id)
+        .join(PentestEstandar, Pentest.estandar_id == PentestEstandar.id)
+        .where(*filters)
     ).all()
+    pentest_ids = [p.id for p in pentests]
 
+    por_estado = {e.value: 0 for e in EstadoPentest}
+    por_estandar: dict[str, int] = {}
+    for p in pentests:
+        por_estado[p.estado.value] += 1
+        por_estandar[p.nombre] = por_estandar.get(p.nombre, 0) + 1
+
+    ataques = (
+        db.execute(
+            select(PentestAtaque.id, PentestAtaque.resultado, PentestAtaque.severidad).where(
+                PentestAtaque.pentest_id.in_(pentest_ids)
+            )
+        ).all()
+        if pentest_ids
+        else []
+    )
+    por_resultado = {r.value: 0 for r in ResultadoAtaque}
     por_severidad = {s.value: 0 for s in Severidad}
-    for severidad, cantidad in db.execute(
-        base(PentestResultado.severidad, func.count(PentestResultado.id)).group_by(PentestResultado.severidad)
-    ):
-        por_severidad[severidad.value] = cantidad
+    for a in ataques:
+        por_resultado[a.resultado.value] += 1
+        if a.resultado == ResultadoAtaque.VULNERABLE and a.severidad is not None:
+            por_severidad[a.severidad.value] += 1
+
+    por_herramienta_rows = (
+        db.execute(
+            select(HerramientaPentest.nombre, func.count())
+            .select_from(pentest_ataque_herramientas)
+            .join(HerramientaPentest, pentest_ataque_herramientas.c.herramienta_id == HerramientaPentest.id)
+            .join(PentestAtaque, pentest_ataque_herramientas.c.ataque_id == PentestAtaque.id)
+            .where(PentestAtaque.pentest_id.in_(pentest_ids))
+            .group_by(HerramientaPentest.nombre)
+            .order_by(func.count().desc(), HerramientaPentest.nombre)
+        ).all()
+        if pentest_ids
+        else []
+    )
+
+    def ordenado(conteos: dict[str, int]) -> list[NombreCantidad]:
+        return [
+            NombreCantidad(nombre=n, cantidad=c)
+            for n, c in sorted(conteos.items(), key=lambda item: (-item[1], item[0]))
+        ]
 
     return Pentesting(
-        total=total,
-        casos_con_pentest=casos_con_pentest,
-        por_herramienta=[NombreCantidad(nombre=n, cantidad=c) for n, c in por_herramienta_rows],
+        total=len(pentests),
+        casos_con_pentest=len({p.caso_id for p in pentests}),
+        por_estado=por_estado,
+        por_estandar=ordenado(por_estandar),
+        ataques_total=len(ataques),
+        por_resultado=por_resultado,
+        vulnerabilidades=por_resultado[ResultadoAtaque.VULNERABLE.value],
         por_severidad=por_severidad,
+        por_herramienta=[NombreCantidad(nombre=n, cantidad=c) for n, c in por_herramienta_rows],
     )
 
 

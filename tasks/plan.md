@@ -191,3 +191,21 @@ pregunta respondida (semáforo distinto de "sin evaluar").
 - [x] **T25 — Reporte trimestral (Word)**
   `GET /metricas/export/docx?desde=&hasta=` con las mismas métricas, para el reporte de cada 3
   meses que hoy se arma a mano. Botón de descarga en el dashboard.
+
+---
+
+# Incremento 5 — Pentesting en tres sectores — Plan de tareas
+
+Decisiones con el usuario: estándares sembrados por migración (editables solo por admin); un
+pentest = un proyecto (caso) + un estándar; ataques vinculados opcionalmente a un paso del
+estándar, con varias herramientas por ataque. Reemplaza `pentest_resultados` (vacía).
+
+- [x] **T26 — Modelo: estándares, pasos, pentests, ataques** (+ migración que reemplaza
+  `pentest_resultados`).
+- [x] **T27 — Seed de estándares** (OWASP LLM Top 10 2025, OWASP ML Top 10, MITRE ATLAS, Red
+  Teaming de IA, Deep Learning adversarial, OWASP Top 10 web 2021) por migración de datos.
+- [x] **T28 — API de estándares** (lectura para todos, escritura solo admin).
+- [x] **T29 — API de gestión de pentests y ataques** (cobertura por paso, validaciones).
+- [x] **T30 — Métricas y reporte** sobre pentests/ataques/vulnerabilidades.
+- [ ] **T31 — Frontend**: Pentesting con tres sectores (Herramientas, Estándares, Gestión) y
+  pentests del proyecto en el detalle del caso.

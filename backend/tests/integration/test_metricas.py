@@ -138,35 +138,74 @@ def test_modelados_incluye_solo_casos_con_respuestas_y_su_riesgo(
     assert m["promedio_compliance_pct"] == pytest.approx(0.045, abs=1e-9)
 
 
-def test_pentesting_agrega_por_herramienta_y_severidad(
+def _estandar_id(client: TestClient, headers: dict, codigo: str) -> str:
+    estandares = client.get("/pentesting/estandares", headers=headers).json()
+    return next(e["id"] for e in estandares if e["codigo"] == codigo)
+
+
+def _pentest(client: TestClient, headers: dict, caso: dict, codigo: str, fecha: str) -> dict:
+    r = client.post(
+        "/pentesting/pentests",
+        json={
+            "caso_id": caso["id"],
+            "estandar_id": _estandar_id(client, headers, codigo),
+            "nombre": f"Pentest {caso['nombre_proyecto']}",
+            "fecha_inicio": fecha,
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def _ataque(client: TestClient, headers: dict, pentest: dict, herramientas: list[dict], resultado: str, severidad=None):
+    r = client.post(
+        f"/pentesting/pentests/{pentest['id']}/ataques",
+        json={
+            "nombre": "ataque",
+            "herramienta_ids": [h["id"] for h in herramientas],
+            "resultado": resultado,
+            "severidad": severidad,
+            "fecha": pentest["fecha_inicio"],
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+
+
+def test_pentesting_agrega_pentests_ataques_herramientas_y_severidad(
     client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     caso_a = _caso(client, auth_headers, nombre="A")
     caso_b = _caso(client, auth_headers, nombre="B")
     burp = client.post("/pentesting/herramientas", json={"nombre": "Burp"}, headers=auth_headers).json()
-    zap = client.post("/pentesting/herramientas", json={"nombre": "ZAP"}, headers=auth_headers).json()
+    garak = client.post("/pentesting/herramientas", json={"nombre": "garak"}, headers=auth_headers).json()
 
-    def resultado(caso, herramienta, severidad, fecha):
-        r = client.post(
-            f"/casos/{caso['id']}/pentests",
-            json={"herramienta_id": herramienta["id"], "hallazgos": "x", "severidad": severidad, "fecha": fecha},
-            headers=auth_headers,
-        )
-        assert r.status_code == 201
-
-    resultado(caso_a, burp, "alta", "2026-03-01")
-    resultado(caso_a, burp, "media", "2026-03-02")
-    resultado(caso_b, zap, "alta", "2026-08-10")
+    llm = _pentest(client, auth_headers, caso_a, "OWASP-LLM-TOP10-2025", "2026-03-01")
+    web = _pentest(client, auth_headers, caso_b, "OWASP-TOP10-WEB-2021", "2026-08-10")
+    _ataque(client, auth_headers, llm, [garak], "vulnerable", "alta")
+    _ataque(client, auth_headers, llm, [garak, burp], "no_vulnerable")
+    _ataque(client, auth_headers, web, [burp], "vulnerable", "critica")
 
     todos = _metricas(client, auth_headers)["pentesting"]
-    assert todos["total"] == 3
+    assert todos["total"] == 2
     assert todos["casos_con_pentest"] == 2
-    assert todos["por_herramienta"][0] == {"nombre": "Burp", "cantidad": 2}
-    assert todos["por_severidad"] == {"baja": 0, "media": 1, "alta": 2, "critica": 0}
+    assert todos["por_estado"] == {"planificado": 2, "en_curso": 0, "finalizado": 0}
+    assert {e["nombre"] for e in todos["por_estandar"]} == {
+        "OWASP Top 10 para Aplicaciones LLM",
+        "OWASP Top 10 (aplicaciones web)",
+    }
+    assert todos["ataques_total"] == 3
+    assert todos["vulnerabilidades"] == 2
+    assert todos["por_resultado"] == {"vulnerable": 2, "no_vulnerable": 1, "no_concluyente": 0}
+    assert todos["por_severidad"] == {"baja": 0, "media": 0, "alta": 1, "critica": 1}
+    # garak en 2 ataques, Burp en 2 ataques
+    assert sorted((h["nombre"], h["cantidad"]) for h in todos["por_herramienta"]) == [("Burp", 2), ("garak", 2)]
 
     solo_marzo = _metricas(client, auth_headers, desde="2026-03-01", hasta="2026-03-31")["pentesting"]
-    assert solo_marzo["total"] == 2
-    assert solo_marzo["casos_con_pentest"] == 1
+    assert solo_marzo["total"] == 1
+    assert solo_marzo["ataques_total"] == 2
+    assert solo_marzo["por_severidad"]["critica"] == 0
 
 
 def test_metricas_requiere_auth(client: TestClient) -> None:
@@ -185,11 +224,8 @@ def _docx_text(content: bytes) -> str:
 def test_export_docx_del_reporte(client: TestClient, auth_headers: dict[str, str]) -> None:
     caso = _caso(client, auth_headers, "ingresado", "Proyecto reportado")
     burp = client.post("/pentesting/herramientas", json={"nombre": "Burp"}, headers=auth_headers).json()
-    client.post(
-        f"/casos/{caso['id']}/pentests",
-        json={"herramienta_id": burp["id"], "hallazgos": "x", "severidad": "alta", "fecha": "2026-03-01"},
-        headers=auth_headers,
-    )
+    pentest = _pentest(client, auth_headers, caso, "OWASP-TOP10-WEB-2021", "2026-03-01")
+    _ataque(client, auth_headers, pentest, [burp], "vulnerable", "alta")
 
     r = client.get(
         "/metricas/export/docx", params={"desde": "2026-01-01", "hasta": "2026-12-31"}, headers=auth_headers
@@ -202,6 +238,7 @@ def test_export_docx_del_reporte(client: TestClient, auth_headers: dict[str, str
     assert "Reporte de métricas" in texto
     assert "2026-01-01 a 2026-12-31" in texto
     assert "Burp" in texto
+    assert "OWASP Top 10 (aplicaciones web)" in texto
     assert "Ingresado" in texto
 
 
@@ -209,7 +246,7 @@ def test_export_docx_sin_datos_no_falla(client: TestClient, auth_headers: dict[s
     r = client.get("/metricas/export/docx", headers=auth_headers)
 
     assert r.status_code == 200
-    assert "Sin pentestings en el período." in _docx_text(r.content)
+    assert "Sin pentests en el período." in _docx_text(r.content)
 
 
 def test_export_docx_requiere_auth(client: TestClient) -> None:

@@ -9,7 +9,8 @@ from app.core.logging import RequestLoggingMiddleware, configure_logging
 from app.documents.router import export_router as documents_export_router
 from app.documents.router import router as documents_router
 from app.metricas.router import router as metricas_router
-from app.pentesting.router import resultados_router as pentesting_resultados_router
+from app.pentesting.router import estandares_router as pentesting_estandares_router
+from app.pentesting.router import pentests_router as pentesting_pentests_router
 from app.pentesting.router import router as pentesting_router
 from app.threat_model.router import router as threat_model_router
 from app.threat_model.router import score_router as threat_model_score_router
@@ -41,7 +42,8 @@ def create_app() -> FastAPI:
     app.include_router(documents_router)
     app.include_router(documents_export_router)
     app.include_router(pentesting_router)
-    app.include_router(pentesting_resultados_router)
+    app.include_router(pentesting_estandares_router)
+    app.include_router(pentesting_pentests_router)
     app.include_router(metricas_router)
     app.include_router(threat_model_score_router)
 
