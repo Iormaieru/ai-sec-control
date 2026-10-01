@@ -67,6 +67,20 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
+    # Cuestionarios por email (app/cuestionarios). "console" por default: no
+    # envía nada, loguea el aviso y la API devuelve el enlace para copiarlo
+    # a mano. Con AISEC_EMAIL_BACKEND=smtp sale por el relay configurado.
+    email_backend: str = "console"
+    email_from: str = "ai-sec-control@localhost"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_starttls: bool = True
+    # URL pública del frontend: base de los enlaces que reciben los contactos.
+    frontend_base_url: str = "http://localhost:5173"
+    cuestionario_validez_dias: int = 15
+
 
 @lru_cache
 def get_settings() -> Settings:

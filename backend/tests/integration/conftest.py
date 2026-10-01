@@ -63,7 +63,7 @@ def _reset_users_and_audit_log() -> Generator[None, None, None]:
             text(
                 "TRUNCATE TABLE users, audit_log, casos, contactos, "
                 "caso_preguntas, caso_respuestas, caso_documentos, herramientas_pentest, "
-                "pentests, pentest_ataques, pentest_ataque_herramientas RESTART IDENTITY CASCADE"
+                "pentests, pentest_ataques, pentest_ataque_herramientas, cuestionario_invitaciones RESTART IDENTITY CASCADE"
             )
         )
 

@@ -4,6 +4,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { CasoDetailPage } from "./pages/CasoDetailPage";
 import { CasoPreguntasPage } from "./pages/CasoPreguntasPage";
 import { CasosPage } from "./pages/CasosPage";
+import { CuestionarioPublicoPage } from "./pages/CuestionarioPublicoPage";
 import { EstandarDetailPage } from "./pages/pentesting/EstandarDetailPage";
 import { EstandaresPage } from "./pages/pentesting/EstandaresPage";
 import { HerramientasPage } from "./pages/pentesting/HerramientasPage";
@@ -15,6 +16,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cuestionario/:token" element={<CuestionarioPublicoPage />} />
       <Route
         path="/casos"
         element={

@@ -116,3 +116,8 @@ dashboards. Conviene definir con ese equipo qué campos indexan como atributos.
 - Backups y ventana de mantenimiento de la instancia (`gcloud sql instances patch`).
 - Si el backend queda público, un mecanismo delante (IAP, Cloud Armor o VPN) — el login local por
   JWT no incluye limitación de intentos.
+- Cuestionario por email: un relay SMTP (`AISEC_EMAIL_BACKEND=smtp`, `AISEC_SMTP_*`, con la clave en
+  Secret Manager) y `AISEC_FRONTEND_BASE_URL` con la URL pública del frontend. El formulario lo
+  abren contactos externos (proveedores): la ruta `/cuestionario/:token` del frontend y los
+  endpoints `/cuestionario*` del backend tienen que quedar alcanzables desde afuera aunque el resto
+  esté detrás de IAP o VPN.

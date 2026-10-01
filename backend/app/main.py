@@ -6,6 +6,8 @@ from app.casos.router import router as casos_router
 from app.catalog.router import router as catalog_router
 from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, configure_logging
+from app.cuestionarios.router import public_router as cuestionarios_public_router
+from app.cuestionarios.router import router as cuestionarios_router
 from app.documents.router import export_router as documents_export_router
 from app.documents.router import router as documents_router
 from app.metricas.router import router as metricas_router
@@ -46,6 +48,8 @@ def create_app() -> FastAPI:
     app.include_router(pentesting_pentests_router)
     app.include_router(metricas_router)
     app.include_router(threat_model_score_router)
+    app.include_router(cuestionarios_router)
+    app.include_router(cuestionarios_public_router)
 
     return app
 

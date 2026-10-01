@@ -72,6 +72,52 @@ body {
   margin-bottom: 24px;
 }
 
+/* ---------- Cuestionario público (enlace por email, sin login) ---------- */
+
+.cuestionario-page {
+  min-height: 100svh;
+  background: #f5f6fb;
+}
+
+.cuestionario-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.cuestionario-header {
+  background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+  color: #fff;
+  padding: 20px 0;
+}
+
+.cuestionario-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  padding: 4px;
+}
+
+.cuestionario-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--bs-body-bg);
+  border-top: 1px solid var(--bs-border-color);
+  box-shadow: 0 -4px 16px rgba(20, 20, 50, 0.08);
+}
+
+.cuestionario-progress {
+  height: 6px;
+  max-width: 320px;
+}
+
+.cuestionario-mensaje {
+  max-width: 460px;
+}
+
 /* ---------- App shell (sidebar navigation) ---------- */
 
 .app-shell {

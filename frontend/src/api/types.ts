@@ -276,3 +276,45 @@ export interface Metricas {
     por_herramienta: { nombre: string; cantidad: number }[];
   };
 }
+
+export type InvitacionEstado = "enviada" | "abierta" | "respondida" | "anulada";
+
+export interface Invitacion {
+  id: string;
+  contacto_id: string;
+  contacto_nombre: string;
+  email: string;
+  estado: InvitacionEstado;
+  vencida: boolean;
+  created_at: string;
+  expira_at: string;
+  abierta_at: string | null;
+  respondida_at: string | null;
+  enlace: string | null;
+}
+
+export interface PreguntaFormulario {
+  pregunta_id: string;
+  dominio_codigo: string;
+  dominio_nombre: string;
+  numero: number;
+  texto_es: string;
+  explicacion_es: string | null;
+  instrucciones_es: string | null;
+  evidencia_esperada: string | null;
+  respuesta: RespuestaValor;
+  comentario: string | null;
+}
+
+export interface Formulario {
+  nombre_proyecto: string;
+  empresa_responsable: string;
+  contacto_nombre: string;
+  expira_at: string;
+  preguntas: PreguntaFormulario[];
+}
+
+export interface EnvioResultado {
+  aplicadas: number;
+  omitidas: number;
+}

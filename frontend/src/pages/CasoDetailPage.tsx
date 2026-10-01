@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import type { Caso, CasoEstado } from "../api/types";
 import { ALLOWED_TRANSITIONS, ESTADO_BADGE_CLASS, ESTADO_LABELS, TIPO_LABELS } from "../casos/labels";
 import { CasoPentestsSection } from "../pentesting/CasoPentestsSection";
+import { CuestionarioEmailSection } from "../threatModel/CuestionarioEmailSection";
 
 export function CasoDetailPage() {
   const { casoId } = useParams<{ casoId: string }>();
@@ -93,7 +94,7 @@ export function CasoDetailPage() {
 
       <CasoPentestsSection casoId={caso.id} />
 
-      <div className="card">
+      <div className="card mb-3">
         <div className="card-body d-flex justify-content-between align-items-center">
           <div>
             <h2 className="h5 mb-1">Modelado de amenazas</h2>
@@ -104,6 +105,8 @@ export function CasoDetailPage() {
           </Link>
         </div>
       </div>
+
+      <CuestionarioEmailSection caso={caso} />
     </>
   );
 }
