@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.jpeg";
+import logo from "../assets/logo-aisec.jpeg";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 

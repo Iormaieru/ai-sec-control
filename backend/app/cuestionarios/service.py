@@ -153,8 +153,8 @@ def _send_invitacion_email(
 <p>Hola {nombre}:</p>
 <p>Te pedimos completar el cuestionario de modelado de amenazas del proyecto
 <strong>{proyecto}</strong> ({empresa}).</p>
-<p><a href="{html.escape(enlace)}" style="display:inline-block;padding:10px 18px;background:#0d6efd;\
-color:#fff;text-decoration:none;border-radius:6px">Completar cuestionario</a></p>
+<p><a href="{html.escape(enlace)}" style="display:inline-block;padding:10px 18px;background:#203ae9;\
+color:#fff;text-decoration:none;border-radius:150px;font-family:Roboto,Arial,sans-serif">Completar cuestionario</a></p>
 <p>El enlace vence el {vence}. Podés guardar y continuar más tarde.<br>
 Es personal: no lo reenvíes.</p>
 """

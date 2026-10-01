@@ -1,33 +1,122 @@
+/* Identidad visual de Banco Macro (macro.com.ar, Application_Macro_Roots.css):
+   azul institucional, azul eléctrico para acciones y rosa como acento.
+   Tipografías: Roboto (texto) y Titillium Web (títulos y botones). */
 :root {
-  --brand-start: #5b6ee8;
-  --brand-end: #8b5cf6;
-  --sidebar-bg: #1c1f2e;
-  --sidebar-fg: #c7cbe0;
-  --sidebar-active-bg: rgba(139, 92, 246, 0.18);
+  --macro-azul: #003057;
+  --macro-azul-electrico: #203ae9;
+  --macro-azul-electrico-hover: #4457d2;
+  --macro-azul-electrico-activo: #0011b5;
+  --macro-rosa: #ff4351;
+  --macro-gris: #292b2c;
+  --macro-fondo: #f1f2f2;
+  --macro-celeste: #e9f3ff;
+
+  --brand-start: var(--macro-azul);
+  --brand-end: var(--macro-azul-electrico);
+  --sidebar-bg: var(--macro-azul);
+  --sidebar-fg: #c9d6e3;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.12);
   --sidebar-active-fg: #ffffff;
+  --font-titulos: "Titillium Web", "Roboto", sans-serif;
   color-scheme: light dark;
 
-  /* Retinta el primary de Bootstrap con el azul-violeta del logo */
-  --bs-primary: #6a5cf0;
-  --bs-primary-rgb: 106, 92, 240;
+  --bs-font-sans-serif: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --bs-body-color: var(--macro-gris);
+  --bs-primary: var(--macro-azul-electrico);
+  --bs-primary-rgb: 32, 58, 233;
   --bs-link-color: var(--bs-primary);
   --bs-link-color-rgb: var(--bs-primary-rgb);
-  --bs-link-hover-color: #564bcf;
-  --bs-link-hover-color-rgb: 86, 75, 207;
+  --bs-link-hover-color: var(--macro-azul-electrico-hover);
+  --bs-link-hover-color-rgb: 68, 87, 210;
+  --bs-focus-ring-color: rgba(32, 58, 233, 0.25);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: var(--font-titulos);
+  font-weight: 600;
+  color: var(--macro-azul);
+}
+
+/* Botones tipo píldora, como en macro.com.ar */
+.btn {
+  font-family: var(--font-titulos);
+  font-weight: 600;
+  border-radius: 150px;
+}
+
+.btn-link {
+  border-radius: 0;
 }
 
 .btn-primary {
-  --bs-btn-bg: var(--bs-primary);
-  --bs-btn-border-color: var(--bs-primary);
-  --bs-btn-hover-bg: #564bcf;
-  --bs-btn-hover-border-color: #564bcf;
-  --bs-btn-active-bg: #4c42b8;
-  --bs-btn-active-border-color: #4c42b8;
+  --bs-btn-bg: var(--macro-azul-electrico);
+  --bs-btn-border-color: var(--macro-azul-electrico);
+  --bs-btn-hover-bg: var(--macro-azul-electrico-hover);
+  --bs-btn-hover-border-color: var(--macro-azul-electrico-hover);
+  --bs-btn-active-bg: var(--macro-azul-electrico-activo);
+  --bs-btn-active-border-color: var(--macro-azul-electrico-activo);
+  --bs-btn-disabled-bg: var(--macro-azul-electrico);
+  --bs-btn-disabled-border-color: var(--macro-azul-electrico);
+  --bs-btn-focus-shadow-rgb: 32, 58, 233;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--macro-azul-electrico);
+  --bs-btn-border-color: var(--macro-azul-electrico);
+  --bs-btn-hover-bg: var(--macro-azul-electrico);
+  --bs-btn-hover-border-color: var(--macro-azul-electrico);
+  --bs-btn-active-bg: var(--macro-azul-electrico-activo);
+  --bs-btn-active-border-color: var(--macro-azul-electrico-activo);
+  --bs-btn-disabled-color: var(--macro-azul-electrico);
+  --bs-btn-disabled-border-color: var(--macro-azul-electrico);
+  --bs-btn-focus-shadow-rgb: 32, 58, 233;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: #8f9cf4;
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.form-check-input:checked {
+  background-color: var(--macro-azul-electrico);
+  border-color: var(--macro-azul-electrico);
+}
+
+.progress,
+.progress-stacked {
+  --bs-progress-bar-bg: var(--macro-azul-electrico);
+}
+
+.text-bg-primary {
+  background-color: var(--macro-azul-electrico) !important;
+}
+
+.card {
+  border-color: #e3e6ea;
+  border-radius: 12px;
+}
+
+.table-light {
+  --bs-table-bg: var(--macro-celeste);
+  --bs-table-color: var(--macro-azul);
 }
 
 body {
   margin: 0;
-  background: #f5f6fb;
+  background: var(--macro-fondo);
 }
 
 /* ---------- Login ---------- */
@@ -58,6 +147,8 @@ body {
 }
 
 .login-brand-name {
+  font-family: var(--font-titulos);
+  color: var(--macro-azul);
   font-weight: 700;
   font-size: 1.5rem;
   text-align: center;
@@ -76,7 +167,7 @@ body {
 
 .cuestionario-page {
   min-height: 100svh;
-  background: #f5f6fb;
+  background: var(--macro-fondo);
 }
 
 .cuestionario-container {
@@ -89,7 +180,12 @@ body {
 .cuestionario-header {
   background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
   color: #fff;
+  border-bottom: 4px solid var(--macro-rosa);
   padding: 20px 0;
+}
+
+.cuestionario-header h1 {
+  color: #fff;
 }
 
 .cuestionario-logo {
@@ -107,6 +203,16 @@ body {
   background: var(--bs-body-bg);
   border-top: 1px solid var(--bs-border-color);
   box-shadow: 0 -4px 16px rgba(20, 20, 50, 0.08);
+}
+
+@media (max-width: 575.98px) {
+  .cuestionario-footer .flex-grow-1 {
+    flex-basis: 100%;
+  }
+
+  .cuestionario-footer .btn {
+    flex: 1;
+  }
 }
 
 .cuestionario-progress {
@@ -151,6 +257,7 @@ body {
 }
 
 .sidebar-brand span {
+  font-family: var(--font-titulos);
   font-weight: 700;
   color: #fff;
   font-size: 1.05rem;
@@ -185,6 +292,7 @@ body {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-fg);
   font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--macro-rosa);
 }
 
 .sidebar-link.disabled {
@@ -289,7 +397,7 @@ body {
 
 .dropzone--active {
   border-color: var(--bs-primary);
-  background: rgba(106, 92, 240, 0.06);
+  background: rgba(32, 58, 233, 0.06);
 }
 
 .dropzone--has-file {

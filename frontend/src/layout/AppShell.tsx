@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import logo from "../assets/logo.jpeg";
+import logo from "../assets/logo-aisec.jpeg";
 import { useAuth } from "../auth/AuthContext";
 
 interface NavLeaf {

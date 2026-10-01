@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import logo from "../assets/logo.jpeg";
+import logo from "../assets/logo-aisec.jpeg";
 import { ApiError } from "../api/client";
 import { enviarRespuestas, getFormulario, guardarBorrador, type RespuestaFormulario } from "../api/cuestionarios";
 import type { EnvioResultado, Formulario, PreguntaFormulario, RespuestaValor } from "../api/types";
