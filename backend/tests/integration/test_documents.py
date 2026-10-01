@@ -222,3 +222,49 @@ def test_imagenes_del_documento_llegan_al_llm_provider(
     assert response.status_code == 201, response.text
     assert len(imagenes_recibidas) == 1
     assert imagenes_recibidas[0].media_type == "image/png"
+
+
+def test_pregunta_recomendada_dos_veces_no_rompe_el_analisis(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    catalog_loaded: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regresión: con un documento real (en inglés) el LLM devolvió la misma
+    pregunta dos veces. La segunda vez la CasoPregunta recién creada tenía
+    la relación `respuesta` vacía en memoria -> AttributeError -> 500. Se
+    toma una sola vez, con las instrucciones de la última aparición."""
+    from app.catalog.models import Pregunta
+    from app.llm.base import LLMProvider
+    from app.llm.schemas import DocumentAnalysisResult, RecommendedQuestion
+
+    pregunta = db.query(Pregunta).first()
+
+    class RepeatingProvider(LLMProvider):
+        def analyze_document(self, document_text, catalog, images=None):
+            return DocumentAnalysisResult(
+                clasificacion="Clasificación de prueba",
+                preguntas_recomendadas=[
+                    RecommendedQuestion(
+                        pregunta_id=str(pregunta.id), instrucciones_es="Primera", instrucciones_en="First"
+                    ),
+                    RecommendedQuestion(
+                        pregunta_id=str(pregunta.id), instrucciones_es="Segunda", instrucciones_en="Second"
+                    ),
+                ],
+            )
+
+    monkeypatch.setattr("app.documents.service.get_llm_provider", lambda: RepeatingProvider())
+    caso = _create_caso(client, auth_headers)
+
+    response = client.post(
+        f"/casos/{caso['id']}/documentos",
+        files={"file": ("doc.docx", _docx_bytes("texto"), DOCX_CONTENT_TYPE)},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201, response.text
+    recomendadas = response.json()["preguntas_recomendadas"]
+    assert [p["pregunta_id"] for p in recomendadas] == [str(pregunta.id)]
+    assert recomendadas[0]["instrucciones_respuesta_es"] == "Segunda"

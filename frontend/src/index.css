@@ -90,9 +90,51 @@ h6,
   box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
 }
 
+/* El borde por defecto de Bootstrap es casi invisible sobre fondo blanco */
+.form-check-input {
+  border: 2px solid #7b8794;
+}
+
+.form-check-input:hover {
+  border-color: var(--macro-azul-electrico);
+}
+
 .form-check-input:checked {
   background-color: var(--macro-azul-electrico);
   border-color: var(--macro-azul-electrico);
+}
+
+/* Opción seleccionable encuadrada (checkbox + texto dentro de un borde) */
+.opcion-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1.5px solid #c5ccd6;
+  border-radius: 10px;
+  background: var(--bs-body-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.opcion-check:hover {
+  border-color: var(--macro-azul-electrico);
+}
+
+.opcion-check .form-check-input {
+  width: 1.2em;
+  height: 1.2em;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.opcion-check--activa {
+  border-color: var(--macro-azul-electrico);
+  background: var(--macro-celeste);
 }
 
 .progress,

@@ -74,18 +74,20 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
         ) : (
           <div className="d-flex flex-wrap align-items-center gap-3">
             {conEmail.map((contacto) => (
-              <div className="form-check" key={contacto.id}>
+              <label
+                key={contacto.id}
+                className={`opcion-check${seleccionados.has(contacto.id) ? " opcion-check--activa" : ""}`}
+              >
                 <input
                   className="form-check-input"
                   type="checkbox"
-                  id={`cuestionario-${contacto.id}`}
                   checked={seleccionados.has(contacto.id)}
                   onChange={() => toggle(contacto.id)}
                 />
-                <label className="form-check-label" htmlFor={`cuestionario-${contacto.id}`}>
+                <span>
                   {contacto.nombre} <span className="text-muted">({contacto.email})</span>
-                </label>
-              </div>
+                </span>
+              </label>
             ))}
             <button
               className="btn btn-primary btn-sm"

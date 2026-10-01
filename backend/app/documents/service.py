@@ -39,8 +39,12 @@ def _validated_recommendations(
     (son UUIDs largos) o directamente inventa uno — pasa incluso con
     proveedores reales, no sólo en teoría. Se descarta silenciosamente
     (con log) cualquier recomendación que no matchee una Pregunta real, en
-    vez de dejar que reviente el insert con un IntegrityError."""
-    validadas = []
+    vez de dejar que reviente el insert con un IntegrityError.
+
+    También puede recomendar la misma pregunta más de una vez: queda una
+    sola, en el orden de su primera aparición y con las instrucciones de la
+    última."""
+    validadas: dict[uuid.UUID, RecommendedQuestion] = {}
     for recomendada in recomendadas:
         try:
             pregunta_id = uuid.UUID(recomendada.pregunta_id)
@@ -50,8 +54,8 @@ def _validated_recommendations(
         if pregunta_id not in catalogo_ids:
             logger.warning("LLM recomendó un pregunta_id que no existe en el catálogo: %s", pregunta_id)
             continue
-        validadas.append((pregunta_id, recomendada))
-    return validadas
+        validadas[pregunta_id] = recomendada
+    return list(validadas.items())
 
 
 def analyze_document(
@@ -108,8 +112,10 @@ def analyze_document(
             caso_pregunta = CasoPregunta(caso_id=caso.id, pregunta_id=pregunta_id)
             db.add(caso_pregunta)
             db.flush()  # asigna caso_pregunta.id para el FK de la respuesta
+            # FK explícito (lo registra la auditoría al crear) y además la
+            # relación, para que caso_pregunta.respuesta no quede en None.
             respuesta = CasoRespuesta(caso_pregunta_id=caso_pregunta.id)
-            db.add(respuesta)
+            caso_pregunta.respuesta = respuesta
             existentes[pregunta_id] = caso_pregunta
         else:
             respuesta = caso_pregunta.respuesta
