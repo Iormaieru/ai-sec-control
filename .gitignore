@@ -28,3 +28,6 @@ frontend/.env
 
 # Excel fuente del catálogo (información interna, no se versiona)
 *.xlsx
+
+# Documentación interna (no se versiona)
+docs/
