@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { addContacto, getCaso, removeContacto, updateCaso } from "../api/casos";
 import { ApiError } from "../api/client";
 import type { Caso, CasoEstado } from "../api/types";
-import { ALLOWED_TRANSITIONS, ESTADO_BADGE_CLASS, ESTADO_LABELS, TIPO_LABELS } from "../casos/labels";
+import { ALLOWED_TRANSITIONS, ESTADO_BADGE_CLASS, ESTADO_LABELS, formatGdld, TIPO_LABELS } from "../casos/labels";
 import { CasoPentestsSection } from "../pentesting/CasoPentestsSection";
 import { CuestionarioEmailSection } from "../threatModel/CuestionarioEmailSection";
 
@@ -65,7 +65,7 @@ export function CasoDetailPage() {
             <dt className="col-sm-3">Tipo</dt>
             <dd className="col-sm-9">{TIPO_LABELS[caso.tipo]}</dd>
             <dt className="col-sm-3">GDLD</dt>
-            <dd className="col-sm-9">{caso.gdld ?? "—"}</dd>
+            <dd className="col-sm-9">{formatGdld(caso.gdld) ?? "—"}</dd>
           </dl>
         </div>
       </div>

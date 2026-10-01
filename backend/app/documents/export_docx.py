@@ -39,7 +39,7 @@ def build_caso_report(db: Session, caso: Caso) -> bytes:
     document.add_paragraph(f"Empresa responsable / Responsible company: {caso.empresa_responsable}")
     document.add_paragraph(f"Tipo / Type: {TIPO_LABELS.get(caso.tipo.value, caso.tipo.value)}")
     if caso.gdld:
-        document.add_paragraph(f"GDLD: {caso.gdld}")
+        document.add_paragraph(f"GDLD {caso.gdld}")
     if clasificacion:
         document.add_paragraph(f"Clasificación de la solución (IA) / AI solution classification: {clasificacion}")
 

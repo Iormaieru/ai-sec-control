@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createCaso, listCasos, type CasoFilters } from "../api/casos";
 import { ApiError } from "../api/client";
 import type { Caso, CasoEstado, CasoTipo } from "../api/types";
-import { ESTADO_BADGE_CLASS, ESTADO_LABELS, TIPO_LABELS } from "../casos/labels";
+import { ESTADO_BADGE_CLASS, ESTADO_LABELS, formatGdld, TIPO_LABELS } from "../casos/labels";
 
 export function CasosPage() {
   const [casos, setCasos] = useState<Caso[]>([]);
@@ -115,6 +115,7 @@ export function CasosPage() {
                 <tr key={caso.id}>
                   <td>
                     <Link to={`/casos/${caso.id}`}>{caso.nombre_proyecto}</Link>
+                    {caso.gdld && <div className="small text-muted">{formatGdld(caso.gdld)}</div>}
                   </td>
                   <td>{caso.empresa_responsable}</td>
                   <td>{TIPO_LABELS[caso.tipo]}</td>
@@ -172,8 +173,17 @@ function NewCasoForm({ onCreated }: { onCreated: (caso: Caso) => void }) {
       <div className="card-body">
         <form onSubmit={handleSubmit} className="row g-2 align-items-end">
           <div className="col-auto">
-            <label className="form-label">GDLD (opcional)</label>
-            <input className="form-control" value={gdld} onChange={(e) => setGdld(e.target.value)} />
+            <label className="form-label" htmlFor="nuevo-caso-gdld">
+              GDLD N° (opc.)
+            </label>
+            <input
+              id="nuevo-caso-gdld"
+              className="form-control"
+              inputMode="numeric"
+              placeholder="Ej: 12190"
+              value={gdld}
+              onChange={(e) => setGdld(e.target.value.replace(/\D/g, ""))}
+            />
           </div>
           <div className="col-auto">
             <label className="form-label">Empresa responsable</label>

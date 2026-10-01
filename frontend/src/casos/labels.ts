@@ -32,3 +32,8 @@ export const ALLOWED_TRANSITIONS: Record<CasoEstado, CasoEstado[]> = {
   cerrado_aprobado: [],
   rechazado: [],
 };
+
+/** El backend guarda sólo el número del GDLD; se muestra como "GDLD 12190". */
+export function formatGdld(gdld: string | null): string | null {
+  return gdld ? `GDLD ${gdld}` : null;
+}

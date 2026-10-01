@@ -18,7 +18,7 @@ def test_create_and_get_caso(client: TestClient, auth_headers: dict[str, str]) -
     created = _create_caso(client, auth_headers)
 
     assert created["estado"] == "abierto"
-    assert created["gdld"] == "GDLD-123"
+    assert created["gdld"] == "123"  # se guarda sólo el número
 
     response = client.get(f"/casos/{created['id']}", headers=auth_headers)
     assert response.status_code == 200
@@ -114,3 +114,19 @@ def test_unauthenticated_request_for_unknown_caso_returns_401_not_404(client: Te
     Ver app/casos/deps.py."""
     response = client.get("/casos/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 401
+
+
+def test_gdld_se_normaliza_a_solo_el_numero(client: TestClient, auth_headers: dict[str, str]) -> None:
+    for valor in ("12190", " GDLD 12190 ", "gdld-12190", "GDLD N° 12190"):
+        assert _create_caso(client, auth_headers, gdld=valor)["gdld"] == "12190", valor
+    assert _create_caso(client, auth_headers, gdld="")["gdld"] is None
+
+
+def test_gdld_no_numerico_devuelve_422(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.post(
+        "/casos",
+        json={"gdld": "12A90", "empresa_responsable": "X", "nombre_proyecto": "Y", "tipo": "candidato"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422

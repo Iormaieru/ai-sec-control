@@ -42,7 +42,7 @@ def test_export_docx_includes_caso_info_and_selected_questions(
     texto = _full_text(response.content)
     assert "Chatbot de soporte" in texto
     assert "ACME" in texto
-    assert "GDLD-42" in texto
+    assert "GDLD 42" in texto
     # al menos una pregunta real de Transparency & Accessibility
     assert "explicarse de manera clara" in texto
 
