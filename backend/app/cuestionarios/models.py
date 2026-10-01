@@ -17,6 +17,11 @@ class InvitacionEstado(str, enum.Enum):
     ANULADA = "anulada"  # reemplazada por un reenvío al mismo contacto
 
 
+class Idioma(str, enum.Enum):
+    ES = "es"
+    EN = "en"
+
+
 class CuestionarioInvitacion(AuditMixin, Base):
     """Un envío del cuestionario de un caso a un contacto por email.
 
@@ -35,6 +40,10 @@ class CuestionarioInvitacion(AuditMixin, Base):
     # Copia del email al momento del envío: el contacto se puede editar después.
     email: Mapped[str] = mapped_column(String(200), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # Idioma de todo lo que ve el contacto: email, formulario y preguntas.
+    idioma: Mapped[Idioma] = mapped_column(
+        Enum(Idioma, name="idioma"), nullable=False, default=Idioma.ES, server_default=Idioma.ES.name
+    )
     estado: Mapped[InvitacionEstado] = mapped_column(
         Enum(InvitacionEstado, name="invitacion_estado"), nullable=False, default=InvitacionEstado.ENVIADA
     )

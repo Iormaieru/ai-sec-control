@@ -1,8 +1,8 @@
 import { api, request } from "./client";
-import type { EnvioResultado, Formulario, Invitacion, RespuestaValor } from "./types";
+import type { EnvioResultado, Formulario, Idioma, Invitacion, RespuestaValor } from "./types";
 
-export function enviarCuestionario(casoId: string, contactoIds: string[]): Promise<Invitacion[]> {
-  return api.post<Invitacion[]>(`/casos/${casoId}/cuestionarios`, { contacto_ids: contactoIds });
+export function enviarCuestionario(casoId: string, contactoIds: string[], idioma: Idioma): Promise<Invitacion[]> {
+  return api.post<Invitacion[]>(`/casos/${casoId}/cuestionarios`, { contacto_ids: contactoIds, idioma });
 }
 
 export function listInvitaciones(casoId: string): Promise<Invitacion[]> {

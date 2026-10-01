@@ -278,12 +278,14 @@ export interface Metricas {
 }
 
 export type InvitacionEstado = "enviada" | "abierta" | "respondida" | "anulada";
+export type Idioma = "es" | "en";
 
 export interface Invitacion {
   id: string;
   contacto_id: string;
   contacto_nombre: string;
   email: string;
+  idioma: Idioma;
   estado: InvitacionEstado;
   vencida: boolean;
   created_at: string;
@@ -298,15 +300,16 @@ export interface PreguntaFormulario {
   dominio_codigo: string;
   dominio_nombre: string;
   numero: number;
-  texto_es: string;
-  explicacion_es: string | null;
-  instrucciones_es: string | null;
+  texto: string;
+  explicacion: string | null;
+  instrucciones: string | null;
   evidencia_esperada: string | null;
   respuesta: RespuestaValor;
   comentario: string | null;
 }
 
 export interface Formulario {
+  idioma: Idioma;
   nombre_proyecto: string;
   empresa_responsable: string;
   contacto_nombre: string;

@@ -24,7 +24,8 @@ router = APIRouter(prefix="/casos/{caso_id}/cuestionarios", tags=["cuestionarios
 # (RequestLoggingMiddleware registra el path).
 public_router = APIRouter(prefix="/cuestionario", tags=["cuestionarios"])
 
-_TOKEN_INVALIDO = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enlace inválido")
+# Sin invitación no se sabe el idioma: el mensaje va en los dos.
+_TOKEN_INVALIDO = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enlace inválido / Invalid link")
 
 
 @router.post("", response_model=list[InvitacionOut], status_code=status.HTTP_201_CREATED)
@@ -35,7 +36,7 @@ def enviar_cuestionario(
     _user: User = Depends(get_current_user),
 ) -> list[InvitacionOut]:
     try:
-        return service.enviar_cuestionario(db, caso, payload.contacto_ids)
+        return service.enviar_cuestionario(db, caso, payload.contacto_ids, payload.idioma)
     except (service.ContactoInvalido, service.CasoSinPreguntas) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except EmailNoEnviado as exc:

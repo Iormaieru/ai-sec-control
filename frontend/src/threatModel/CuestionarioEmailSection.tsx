@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../api/client";
 import { enviarCuestionario, listInvitaciones } from "../api/cuestionarios";
-import type { Caso, Invitacion, InvitacionEstado } from "../api/types";
+import type { Caso, Idioma, Invitacion, InvitacionEstado } from "../api/types";
 
 const ESTADO_INVITACION: Record<InvitacionEstado, { label: string; badge: string }> = {
   enviada: { label: "Enviado", badge: "text-bg-secondary" },
@@ -9,6 +9,11 @@ const ESTADO_INVITACION: Record<InvitacionEstado, { label: string; badge: string
   respondida: { label: "Respondido", badge: "text-bg-success" },
   anulada: { label: "Reemplazado", badge: "text-bg-light" },
 };
+
+const IDIOMAS: { valor: Idioma; label: string }[] = [
+  { valor: "es", label: "Español" },
+  { valor: "en", label: "English" },
+];
 
 function fecha(valor: string | null): string {
   return valor ? new Date(valor).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" }) : "—";
@@ -23,6 +28,7 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
   const [enlaces, setEnlaces] = useState<Invitacion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [idioma, setIdioma] = useState<Idioma>("es");
 
   const conEmail = caso.contactos.filter((c) => c.email);
 
@@ -47,7 +53,7 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
     setError(null);
     setEnviando(true);
     try {
-      const creadas = await enviarCuestionario(caso.id, [...seleccionados]);
+      const creadas = await enviarCuestionario(caso.id, [...seleccionados], idioma);
       setEnlaces(creadas.filter((i) => i.enlace));
       setSeleccionados(new Set());
       reload();
@@ -64,40 +70,60 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
       <div className="card-body">
         <h2 className="h5 mb-1">Cuestionario por email</h2>
         <p className="text-muted small">
-          Cada contacto recibe un enlace personal a un formulario con las preguntas pendientes del caso. Lo que
-          responde se carga solo en el modelado de amenazas, sin pisar lo que ya respondió el equipo. Reenviar a un
-          contacto invalida su enlace anterior.
+          Cada contacto recibe un enlace personal a un formulario con las preguntas pendientes del caso. Lo que responde
+          se carga solo en el modelado de amenazas, sin pisar lo que ya respondió el equipo. Reenviar a un contacto
+          invalida su enlace anterior.
         </p>
 
         {conEmail.length === 0 ? (
           <p className="text-muted mb-0">Agregá un contacto con email para poder enviar el cuestionario.</p>
         ) : (
-          <div className="d-flex flex-wrap align-items-center gap-3">
-            {conEmail.map((contacto) => (
-              <label
-                key={contacto.id}
-                className={`opcion-check${seleccionados.has(contacto.id) ? " opcion-check--activa" : ""}`}
+          <>
+            <div className="d-flex flex-wrap align-items-center gap-3 mb-3">
+              {conEmail.map((contacto) => (
+                <label
+                  key={contacto.id}
+                  className={`opcion-check${seleccionados.has(contacto.id) ? " opcion-check--activa" : ""}`}
+                >
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={seleccionados.has(contacto.id)}
+                    onChange={() => toggle(contacto.id)}
+                  />
+                  <span>
+                    {contacto.nombre} <span className="text-muted">({contacto.email})</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="d-flex flex-wrap align-items-center gap-3">
+              <div className="d-flex align-items-center gap-2">
+                <span className="small fw-semibold">Idioma del cuestionario:</span>
+                <div className="btn-group btn-group-sm" role="group" aria-label="Idioma del cuestionario">
+                  {IDIOMAS.map((opcion) => (
+                    <button
+                      key={opcion.valor}
+                      type="button"
+                      className={`btn ${idioma === opcion.valor ? "btn-primary" : "btn-outline-primary"}`}
+                      aria-pressed={idioma === opcion.valor}
+                      onClick={() => setIdioma(opcion.valor)}
+                    >
+                      {opcion.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleEnviar}
+                disabled={seleccionados.size === 0 || enviando}
               >
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={seleccionados.has(contacto.id)}
-                  onChange={() => toggle(contacto.id)}
-                />
-                <span>
-                  {contacto.nombre} <span className="text-muted">({contacto.email})</span>
-                </span>
-              </label>
-            ))}
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleEnviar}
-              disabled={seleccionados.size === 0 || enviando}
-            >
-              <i className="bi bi-envelope me-1" />
-              {enviando ? "Enviando…" : "Enviar cuestionario"}
-            </button>
-          </div>
+                <i className="bi bi-envelope me-1" />
+                {enviando ? "Enviando…" : "Enviar cuestionario"}
+              </button>
+            </div>
+          </>
         )}
 
         {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
@@ -131,6 +157,7 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
                 <tr>
                   <th>Contacto</th>
                   <th>Estado</th>
+                  <th>Idioma</th>
                   <th>Enviado</th>
                   <th>Respondido</th>
                   <th>Vence</th>
@@ -149,6 +176,7 @@ export function CuestionarioEmailSection({ caso }: { caso: Caso }) {
                           {inv.vencida ? "Vencido" : estado.label}
                         </span>
                       </td>
+                      <td>{inv.idioma === "en" ? "English" : "Español"}</td>
                       <td>{fecha(inv.created_at)}</td>
                       <td>{fecha(inv.respondida_at)}</td>
                       <td>{inv.estado === "respondida" || inv.estado === "anulada" ? "—" : fecha(inv.expira_at)}</td>

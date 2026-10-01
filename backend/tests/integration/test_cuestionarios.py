@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.audit.models import AuditLog
+from app.catalog.models import Pregunta
 from app.core.email import EmailNoEnviado
 from app.cuestionarios import service
 from app.cuestionarios.models import CuestionarioInvitacion
@@ -33,10 +34,10 @@ def _setup_caso(client: TestClient, auth_headers: dict[str, str], *, email: str 
     return {"caso": caso, "contacto": contacto, "preguntas": preguntas}
 
 
-def _enviar(client: TestClient, auth_headers: dict[str, str], setup: dict) -> dict:
+def _enviar(client: TestClient, auth_headers: dict[str, str], setup: dict, **extra: str) -> dict:
     response = client.post(
         f"/casos/{setup['caso']['id']}/cuestionarios",
-        json={"contacto_ids": [setup["contacto"]["id"]]},
+        json={"contacto_ids": [setup["contacto"]["id"]], **extra},
         headers=auth_headers,
     )
     assert response.status_code == 201, response.text
@@ -326,3 +327,65 @@ def test_respuesta_del_contacto_queda_auditada_a_su_nombre(
         .all()
     )
     assert [str(log.actor_id) for log in logs] == [setup["contacto"]["id"]]
+
+
+def test_por_defecto_el_cuestionario_sale_en_espanol(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None, outbox: list[dict]
+) -> None:
+    setup = _setup_caso(client, auth_headers)
+    invitacion = _enviar(client, auth_headers, setup)
+
+    formulario = client.get("/cuestionario", headers=_token(invitacion)).json()
+
+    assert invitacion["idioma"] == "es"
+    assert outbox[0]["subject"].startswith("Cuestionario de seguridad de IA")
+    assert formulario["idioma"] == "es"
+    primera = formulario["preguntas"][0]
+    pregunta = db.get(Pregunta, uuid.UUID(primera["pregunta_id"]))
+    assert primera["texto"] == pregunta.texto_es
+
+
+def test_cuestionario_en_ingles(
+    client: TestClient, auth_headers: dict[str, str], db: Session, catalog_loaded: None, outbox: list[dict]
+) -> None:
+    setup = _setup_caso(client, auth_headers)
+
+    invitacion = _enviar(client, auth_headers, setup, idioma="en")
+    formulario = client.get("/cuestionario", headers=_token(invitacion)).json()
+
+    assert invitacion["idioma"] == "en"
+    assert outbox[0]["subject"] == "AI security questionnaire — Chatbot"
+    assert "Hello Ana," in outbox[0]["text"]
+    assert "Complete questionnaire" in outbox[0]["html"]
+    assert formulario["idioma"] == "en"
+    for item in formulario["preguntas"]:
+        pregunta = db.get(Pregunta, uuid.UUID(item["pregunta_id"]))
+        assert item["texto"] == pregunta.texto_en
+        assert item["explicacion"] == pregunta.explicacion_control_en
+
+
+def test_mensaje_de_enlace_no_vigente_en_el_idioma_de_la_invitacion(
+    client: TestClient, auth_headers: dict[str, str], catalog_loaded: None, outbox: list[dict]
+) -> None:
+    setup = _setup_caso(client, auth_headers)
+    invitacion = _enviar(client, auth_headers, setup, idioma="en")
+    client.post("/cuestionario/enviar", json={"respuestas": []}, headers=_token(invitacion))
+
+    response = client.get("/cuestionario", headers=_token(invitacion))
+
+    assert response.status_code == 410
+    assert response.json()["detail"] == "This questionnaire has already been submitted. Thank you!"
+
+
+def test_idioma_invalido_devuelve_422(
+    client: TestClient, auth_headers: dict[str, str], catalog_loaded: None, outbox: list[dict]
+) -> None:
+    setup = _setup_caso(client, auth_headers)
+
+    response = client.post(
+        f"/casos/{setup['caso']['id']}/cuestionarios",
+        json={"contacto_ids": [setup["contacto"]["id"]], "idioma": "fr"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422

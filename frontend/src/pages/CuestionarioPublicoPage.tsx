@@ -4,19 +4,15 @@ import logo from "../assets/logo-aisec.jpeg";
 import { ApiError } from "../api/client";
 import { enviarRespuestas, getFormulario, guardarBorrador, type RespuestaFormulario } from "../api/cuestionarios";
 import type { EnvioResultado, Formulario, PreguntaFormulario, RespuestaValor } from "../api/types";
-import { RESPUESTA_LABELS } from "../threatModel/labels";
+import { idiomaDelNavegador, TEXTOS_CUESTIONARIO, type TextosCuestionario } from "../threatModel/cuestionarioTextos";
 
-const OPCIONES: { valor: RespuestaValor; ayuda: string }[] = [
-  { valor: "SI", ayuda: "" },
-  { valor: "NO", ayuda: "" },
-  { valor: "NA_ARQ", ayuda: "La solución no tiene ese componente." },
-  { valor: "NA_FASE", ayuda: "Todavía no corresponde en esta etapa del proyecto." },
-];
+const OPCIONES = ["SI", "NO", "NA_ARQ", "NA_FASE"] as const;
 
 type Respuestas = Record<string, { respuesta: RespuestaValor; comentario: string }>;
 
 /** Formulario que abre el contacto desde el enlace del email. Sin login y
- * fuera del AppShell: el token de la URL es la única credencial. */
+ * fuera del AppShell: el token de la URL es la única credencial. Todo se
+ * muestra en el idioma elegido al enviar la invitación. */
 export function CuestionarioPublicoPage() {
   const { token = "" } = useParams<{ token: string }>();
   const [formulario, setFormulario] = useState<Formulario | null>(null);
@@ -27,6 +23,7 @@ export function CuestionarioPublicoPage() {
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [resultado, setResultado] = useState<EnvioResultado | null>(null);
+  const t = TEXTOS_CUESTIONARIO[formulario?.idioma ?? idiomaDelNavegador()];
 
   useEffect(() => {
     getFormulario(token)
@@ -40,7 +37,9 @@ export function CuestionarioPublicoPage() {
       })
       .catch((err) =>
         setCargaError(
-          err instanceof ApiError && err.status !== 422 ? err.detail : "No se pudo abrir el cuestionario",
+          err instanceof ApiError && err.status !== 422
+            ? err.detail
+            : TEXTOS_CUESTIONARIO[idiomaDelNavegador()].errorCarga,
         ),
       );
   }, [token]);
@@ -84,9 +83,9 @@ export function CuestionarioPublicoPage() {
     try {
       await guardarBorrador(token, payload());
       setCambiosSinGuardar(false);
-      setAviso("Guardado. Podés cerrar esta página y seguir más tarde con el mismo enlace.");
+      setAviso(t.guardado);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "No se pudo guardar");
+      setError(err instanceof ApiError ? err.detail : t.errorGuardar);
     } finally {
       setOcupado(false);
     }
@@ -94,10 +93,7 @@ export function CuestionarioPublicoPage() {
 
   async function handleEnviar() {
     const faltan = total - respondidas;
-    const mensaje =
-      faltan > 0
-        ? `Quedan ${faltan} pregunta(s) sin responder. Una vez enviado no vas a poder modificarlo. ¿Enviar igual?`
-        : "Una vez enviado no vas a poder modificarlo. ¿Enviar las respuestas?";
+    const mensaje = faltan > 0 ? t.confirmarFaltan(faltan) : t.confirmarEnviar;
     if (!window.confirm(mensaje)) return;
 
     setError(null);
@@ -108,7 +104,7 @@ export function CuestionarioPublicoPage() {
       setResultado(res);
       window.scrollTo({ top: 0 });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "No se pudieron enviar las respuestas");
+      setError(err instanceof ApiError ? err.detail : t.errorEnviar);
     } finally {
       setOcupado(false);
     }
@@ -123,12 +119,8 @@ export function CuestionarioPublicoPage() {
             {resultado ? (
               <>
                 <i className="bi bi-check-circle-fill text-success fs-1" />
-                <h1 className="h4 mt-2">¡Gracias! Recibimos tus respuestas</h1>
-                <p className="text-muted mb-0">
-                  Se registraron {resultado.aplicadas} respuesta(s).
-                  {resultado.omitidas > 0 &&
-                    ` ${resultado.omitidas} ya las había respondido el equipo de seguridad y se mantuvieron.`}
-                </p>
+                <h1 className="h4 mt-2">{t.graciasTitulo}</h1>
+                <p className="text-muted mb-0">{t.graciasDetalle(resultado.aplicadas, resultado.omitidas)}</p>
               </>
             ) : (
               <>
@@ -146,19 +138,19 @@ export function CuestionarioPublicoPage() {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100svh" }}>
         <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando…</span>
+          <span className="visually-hidden">{t.cargando}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="cuestionario-page">
+    <div className="cuestionario-page" lang={formulario.idioma}>
       <header className="cuestionario-header">
         <div className="cuestionario-container d-flex align-items-center gap-3">
           <img src={logo} alt="" className="cuestionario-logo" />
           <div>
-            <p className="mb-0 small opacity-75">Cuestionario de seguridad de IA</p>
+            <p className="mb-0 small opacity-75">{t.titulo}</p>
             <h1 className="h4 mb-0">{formulario.nombre_proyecto}</h1>
             <p className="mb-0 small opacity-75">{formulario.empresa_responsable}</p>
           </div>
@@ -168,23 +160,17 @@ export function CuestionarioPublicoPage() {
       <main className="cuestionario-container py-4">
         <div className="card mb-4">
           <div className="card-body">
-            <p className="mb-2">Hola {formulario.contacto_nombre}:</p>
-            <p className="mb-2">
-              Respondé cada pregunta sobre la solución. Si querés aclarar algo, usá el campo de comentario.
-              Podés guardar y volver más tarde con el mismo enlace, que vence el{" "}
-              {new Date(formulario.expira_at).toLocaleDateString("es-AR")}.
-            </p>
+            <p className="mb-2">{t.saludo(formulario.contacto_nombre)}</p>
+            <p className="mb-2">{t.instrucciones(new Date(formulario.expira_at).toLocaleDateString(t.locale))}</p>
             <p className="mb-0 text-muted small">
-              Cuando termines, presioná <strong>Enviar respuestas</strong>. Después de enviar no se pueden modificar.
+              {t.alTerminar[0]}
+              <strong>{t.alTerminar[1]}</strong>
+              {t.alTerminar[2]}
             </p>
           </div>
         </div>
 
-        {total === 0 && (
-          <div className="alert alert-info">
-            No hay preguntas pendientes: el equipo de seguridad ya respondió todo el cuestionario.
-          </div>
-        )}
+        {total === 0 && <div className="alert alert-info">{t.sinPendientes}</div>}
 
         {[...porDominio.entries()].map(([dominio, preguntas]) => (
           <section key={dominio} className="mb-4">
@@ -194,6 +180,7 @@ export function CuestionarioPublicoPage() {
                 key={pregunta.pregunta_id}
                 pregunta={pregunta}
                 valor={respuestas[pregunta.pregunta_id]}
+                t={t}
                 onChange={(cambio) => actualizar(pregunta.pregunta_id, cambio)}
               />
             ))}
@@ -206,18 +193,24 @@ export function CuestionarioPublicoPage() {
           <div className="cuestionario-container d-flex flex-wrap align-items-center gap-2 py-2">
             <div className="flex-grow-1">
               <div className="small text-muted">
-                {respondidas} de {total} respondidas
-                {cambiosSinGuardar && " · cambios sin guardar"}
+                {t.progreso(respondidas, total)}
+                {cambiosSinGuardar && ` · ${t.cambiosSinGuardar}`}
               </div>
-              <div className="progress cuestionario-progress" role="progressbar" aria-valuenow={respondidas} aria-valuemin={0} aria-valuemax={total}>
+              <div
+                className="progress cuestionario-progress"
+                role="progressbar"
+                aria-valuenow={respondidas}
+                aria-valuemin={0}
+                aria-valuemax={total}
+              >
                 <div className="progress-bar" style={{ width: `${(respondidas / total) * 100}%` }} />
               </div>
             </div>
             <button className="btn btn-outline-primary" onClick={handleGuardar} disabled={ocupado}>
-              Guardar y seguir después
+              {t.guardar}
             </button>
             <button className="btn btn-primary" onClick={handleEnviar} disabled={ocupado}>
-              Enviar respuestas
+              {t.enviar}
             </button>
           </div>
           {(error || aviso) && (
@@ -234,28 +227,30 @@ export function CuestionarioPublicoPage() {
 function PreguntaCard({
   pregunta,
   valor,
+  t,
   onChange,
 }: {
   pregunta: PreguntaFormulario;
   valor: Respuestas[string];
+  t: TextosCuestionario;
   onChange: (cambio: Partial<Respuestas[string]>) => void;
 }) {
   const nombre = `respuesta-${pregunta.pregunta_id}`;
-  const ayuda = pregunta.instrucciones_es ?? pregunta.explicacion_es;
+  const ayuda = pregunta.instrucciones ?? pregunta.explicacion;
 
   return (
     <div className={`card mb-3 ${valor.respuesta !== "PENDIENTE" ? "border-success-subtle" : ""}`}>
       <div className="card-body">
         <p className="fw-semibold mb-2">
-          {pregunta.dominio_codigo}-{pregunta.numero}. {pregunta.texto_es}
+          {pregunta.dominio_codigo}-{pregunta.numero}. {pregunta.texto}
         </p>
         {ayuda && (
           <details className="mb-2 small">
-            <summary className="text-primary">¿Cómo responder?</summary>
+            <summary className="text-primary">{t.comoResponder}</summary>
             <p className="mb-1 mt-1 text-muted">{ayuda}</p>
             {pregunta.evidencia_esperada && (
               <p className="mb-0 text-muted">
-                <strong>Evidencia esperada:</strong> {pregunta.evidencia_esperada}
+                <strong>{t.evidenciaEsperada}</strong> {pregunta.evidencia_esperada}
               </p>
             )}
           </details>
@@ -263,17 +258,17 @@ function PreguntaCard({
 
         <div className="d-flex flex-wrap gap-3 mb-2" role="radiogroup">
           {OPCIONES.map((opcion) => (
-            <div className="form-check" key={opcion.valor} title={opcion.ayuda || undefined}>
+            <div className="form-check" key={opcion} title={t.ayudaOpciones[opcion]}>
               <input
                 className="form-check-input"
                 type="radio"
                 name={nombre}
-                id={`${nombre}-${opcion.valor}`}
-                checked={valor.respuesta === opcion.valor}
-                onChange={() => onChange({ respuesta: opcion.valor })}
+                id={`${nombre}-${opcion}`}
+                checked={valor.respuesta === opcion}
+                onChange={() => onChange({ respuesta: opcion })}
               />
-              <label className="form-check-label" htmlFor={`${nombre}-${opcion.valor}`}>
-                {RESPUESTA_LABELS[opcion.valor]}
+              <label className="form-check-label" htmlFor={`${nombre}-${opcion}`}>
+                {t.opciones[opcion]}
               </label>
             </div>
           ))}
@@ -283,7 +278,7 @@ function PreguntaCard({
               className="btn btn-link btn-sm p-0 text-muted"
               onClick={() => onChange({ respuesta: "PENDIENTE" })}
             >
-              Limpiar
+              {t.limpiar}
             </button>
           )}
         </div>
@@ -292,7 +287,7 @@ function PreguntaCard({
           className="form-control form-control-sm"
           rows={2}
           maxLength={4000}
-          placeholder="Comentario (opcional)"
+          placeholder={t.comentario}
           value={valor.comentario}
           onChange={(e) => onChange({ comentario: e.target.value })}
         />

@@ -11,7 +11,7 @@ from app.casos.models import Caso, Contacto
 from app.catalog.models import Dominio, Pregunta
 from app.core.config import get_settings
 from app.core.email import send_email
-from app.cuestionarios.models import CuestionarioInvitacion, InvitacionEstado
+from app.cuestionarios.models import CuestionarioInvitacion, Idioma, InvitacionEstado
 from app.cuestionarios.schemas import (
     EnvioResultadoOut,
     FormularioOut,
@@ -63,6 +63,7 @@ def to_invitacion_out(invitacion: CuestionarioInvitacion, enlace: str | None = N
         contacto_id=invitacion.contacto_id,
         contacto_nombre=invitacion.contacto.nombre,
         email=invitacion.email,
+        idioma=invitacion.idioma,
         estado=invitacion.estado,
         vencida=invitacion.estado in _ACTIVAS and is_vencida(invitacion),
         created_at=invitacion.created_at,
@@ -76,7 +77,9 @@ def to_invitacion_out(invitacion: CuestionarioInvitacion, enlace: str | None = N
 # --- Lado del analista ---
 
 
-def enviar_cuestionario(db: Session, caso: Caso, contacto_ids: list[uuid.UUID]) -> list[InvitacionOut]:
+def enviar_cuestionario(
+    db: Session, caso: Caso, contacto_ids: list[uuid.UUID], idioma: Idioma = Idioma.ES
+) -> list[InvitacionOut]:
     """Crea una invitación por contacto y le manda el enlace por email.
 
     Reenviar a un contacto anula su invitación anterior todavía activa: el
@@ -113,6 +116,7 @@ def enviar_cuestionario(db: Session, caso: Caso, contacto_ids: list[uuid.UUID]) 
             caso_id=caso.id,
             contacto_id=contacto.id,
             email=contacto.email,
+            idioma=idioma,
             token_hash=hash_token(token),
             estado=InvitacionEstado.ENVIADA,
             expira_at=_now() + timedelta(days=settings.cuestionario_validez_dias),
@@ -134,29 +138,56 @@ def enviar_cuestionario(db: Session, caso: Caso, contacto_ids: list[uuid.UUID]) 
     return resultado
 
 
+_EMAIL = {
+    Idioma.ES: {
+        "subject": "Cuestionario de seguridad de IA — {proyecto}",
+        "saludo": "Hola {nombre}:",
+        "pedido": "Te pedimos completar el cuestionario de modelado de amenazas del proyecto {proyecto} ({empresa}).",
+        "enlace": "Completalo desde este enlace (vence el {vence}):",
+        "boton": "Completar cuestionario",
+        "vence": "El enlace vence el {vence}. Podés guardar y continuar más tarde.",
+        "personal": "Es personal: no lo reenvíes.",
+    },
+    Idioma.EN: {
+        "subject": "AI security questionnaire — {proyecto}",
+        "saludo": "Hello {nombre},",
+        "pedido": "Please complete the threat modeling questionnaire for the project {proyecto} ({empresa}).",
+        "enlace": "Fill it in from this link (expires on {vence}):",
+        "boton": "Complete questionnaire",
+        "vence": "The link expires on {vence}. You can save and continue later.",
+        "personal": "It is personal: please do not forward it.",
+    },
+}
+
+
+def _fecha(valor: datetime, idioma: Idioma) -> str:
+    if idioma == Idioma.EN:
+        return f"{valor:%B} {valor.day}, {valor.year}"
+    return valor.strftime("%d/%m/%Y")
+
+
 def _send_invitacion_email(
     caso: Caso, contacto: Contacto, invitacion: CuestionarioInvitacion, enlace: str
 ) -> None:
-    vence = invitacion.expira_at.strftime("%d/%m/%Y")
-    subject = f"Cuestionario de seguridad de IA — {caso.nombre_proyecto}"
+    t = _EMAIL[invitacion.idioma]
+    vence = _fecha(invitacion.expira_at, invitacion.idioma)
+    subject = t["subject"].format(proyecto=caso.nombre_proyecto)
     text = (
-        f"Hola {contacto.nombre}:\n\n"
-        f"Te pedimos completar el cuestionario de modelado de amenazas del proyecto "
-        f"{caso.nombre_proyecto} ({caso.empresa_responsable}).\n\n"
-        f"Completalo desde este enlace (vence el {vence}):\n{enlace}\n\n"
-        "Podés guardar y continuar más tarde. El enlace es personal: no lo reenvíes.\n"
+        f"{t['saludo'].format(nombre=contacto.nombre)}\n\n"
+        f"{t['pedido'].format(proyecto=caso.nombre_proyecto, empresa=caso.empresa_responsable)}\n\n"
+        f"{t['enlace'].format(vence=vence)}\n{enlace}\n\n"
+        f"{t['vence'].format(vence=vence)} {t['personal']}\n"
     )
     nombre = html.escape(contacto.nombre)
-    proyecto = html.escape(caso.nombre_proyecto)
+    proyecto = f"<strong>{html.escape(caso.nombre_proyecto)}</strong>"
     empresa = html.escape(caso.empresa_responsable)
     body_html = f"""\
-<p>Hola {nombre}:</p>
-<p>Te pedimos completar el cuestionario de modelado de amenazas del proyecto
-<strong>{proyecto}</strong> ({empresa}).</p>
+<p>{t["saludo"].format(nombre=nombre)}</p>
+<p>{t["pedido"].format(proyecto=proyecto, empresa=empresa)}</p>
 <p><a href="{html.escape(enlace)}" style="display:inline-block;padding:10px 18px;background:#203ae9;\
-color:#fff;text-decoration:none;border-radius:150px;font-family:Roboto,Arial,sans-serif">Completar cuestionario</a></p>
-<p>El enlace vence el {vence}. Podés guardar y continuar más tarde.<br>
-Es personal: no lo reenvíes.</p>
+color:#fff;text-decoration:none;border-radius:150px;font-family:Roboto,Arial,sans-serif">{t["boton"]}</a></p>
+<p>{t["vence"].format(vence=vence)}<br>
+{t["personal"]}</p>
 """
     send_email(to=invitacion.email, subject=subject, text=text, html=body_html)
 
@@ -177,13 +208,28 @@ def get_invitacion_por_token(db: Session, token: str) -> CuestionarioInvitacion 
     return db.scalar(select(CuestionarioInvitacion).where(CuestionarioInvitacion.token_hash == hash_token(token)))
 
 
+_NO_VIGENTE = {
+    Idioma.ES: {
+        "respondida": "Este cuestionario ya fue enviado. ¡Gracias!",
+        "anulada": "Este enlace fue reemplazado por uno más nuevo. Revisá tu último email.",
+        "vencida": "Este enlace venció. Pedile al equipo de seguridad que te lo reenvíe.",
+    },
+    Idioma.EN: {
+        "respondida": "This questionnaire has already been submitted. Thank you!",
+        "anulada": "This link was replaced by a newer one. Please check your latest email.",
+        "vencida": "This link has expired. Please ask the security team to send it again.",
+    },
+}
+
+
 def verificar_vigente(invitacion: CuestionarioInvitacion) -> None:
+    mensajes = _NO_VIGENTE[invitacion.idioma]
     if invitacion.estado == InvitacionEstado.RESPONDIDA:
-        raise InvitacionNoVigente("Este cuestionario ya fue enviado. ¡Gracias!")
+        raise InvitacionNoVigente(mensajes["respondida"])
     if invitacion.estado == InvitacionEstado.ANULADA:
-        raise InvitacionNoVigente("Este enlace fue reemplazado por uno más nuevo. Revisá tu último email.")
+        raise InvitacionNoVigente(mensajes["anulada"])
     if is_vencida(invitacion):
-        raise InvitacionNoVigente("Este enlace venció. Pedile al equipo de seguridad que te lo reenvíe.")
+        raise InvitacionNoVigente(mensajes["vencida"])
 
 
 def _rows_pendientes(db: Session, caso_id: uuid.UUID):
@@ -206,6 +252,7 @@ def get_formulario(db: Session, invitacion: CuestionarioInvitacion) -> Formulari
         db.commit()
 
     borrador = invitacion.borrador or {}
+    en = invitacion.idioma == Idioma.EN
     preguntas = []
     for respuesta, pregunta, dominio in _rows_pendientes(db, invitacion.caso_id):
         guardada = borrador.get(str(pregunta.id), {})
@@ -215,9 +262,9 @@ def get_formulario(db: Session, invitacion: CuestionarioInvitacion) -> Formulari
                 dominio_codigo=dominio.codigo,
                 dominio_nombre=dominio.nombre,
                 numero=pregunta.numero,
-                texto_es=pregunta.texto_es,
-                explicacion_es=pregunta.explicacion_control_es,
-                instrucciones_es=respuesta.instrucciones_respuesta_es,
+                texto=pregunta.texto_en if en else pregunta.texto_es,
+                explicacion=pregunta.explicacion_control_en if en else pregunta.explicacion_control_es,
+                instrucciones=respuesta.instrucciones_respuesta_en if en else respuesta.instrucciones_respuesta_es,
                 evidencia_esperada=respuesta.evidencia_esperada,
                 respuesta=guardada.get("respuesta", RespuestaValor.PENDIENTE),
                 comentario=guardada.get("comentario"),
@@ -226,6 +273,7 @@ def get_formulario(db: Session, invitacion: CuestionarioInvitacion) -> Formulari
 
     caso = invitacion.caso
     return FormularioOut(
+        idioma=invitacion.idioma,
         nombre_proyecto=caso.nombre_proyecto,
         empresa_responsable=caso.empresa_responsable,
         contacto_nombre=invitacion.contacto.nombre,
@@ -237,7 +285,7 @@ def get_formulario(db: Session, invitacion: CuestionarioInvitacion) -> Formulari
 def _validar_alcance(db: Session, caso_id: uuid.UUID, respuestas: list[RespuestaFormulario]) -> None:
     en_alcance = set(db.scalars(select(CasoPregunta.pregunta_id).where(CasoPregunta.caso_id == caso_id)))
     if any(r.pregunta_id not in en_alcance for r in respuestas):
-        raise PreguntaFueraDeAlcance("Alguna de las preguntas no pertenece a este cuestionario")
+        raise PreguntaFueraDeAlcance("Alguna de las preguntas no pertenece a este cuestionario / Some questions do not belong to this questionnaire")
 
 
 def _to_borrador(respuestas: list[RespuestaFormulario]) -> dict:
