@@ -1,0 +1,20 @@
+# Sólo aplica a builds con contexto en la raíz del repo (el worker:
+# worker/Dockerfile). backend y frontend construyen desde su carpeta y usan
+# su propio .dockerignore. Sólo exclusiones, sin re-inclusiones (!), para que
+# lo interprete igual cualquier builder.
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+**/node_modules
+frontend
+docs
+tasks
+*.xlsx
+backend/tests
+backend/alembic
+worker/tests

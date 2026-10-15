@@ -1,5 +1,5 @@
 # Worker de sincronización con Jira. Se construye desde la RAÍZ del repo
-# (necesita backend/app, que reutiliza como librería):
+# (necesita backend/app, que reutiliza como librería; ver /.dockerignore):
 #   docker build -f worker/Dockerfile .
 FROM python:3.12-slim
 
