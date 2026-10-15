@@ -1,12 +1,14 @@
-"""Sincronización de casos con Jira.
+"""Integración con Jira del lado del backend.
 
-- push: procesa la outbox (cambios hechos en la plataforma) en orden, por
-  caso. Un error transitorio (red, 429, 5xx) se reintenta con backoff; un
-  4xx descarta la operación y deja el caso en error hasta que alguien
-  pulse "Reintentar".
-- pull: trae de Jira los tickets del tablero IA-SEC actualizados desde la
-  última corrida (la primera vez, todos) y los aplica: crea los casos que
-  faltan y actualiza estado, resumen, GDLD y comentarios.
+El backend no sincroniza en segundo plano: cada cambio hecho en la plataforma
+queda como evento en jira_outbox (ver outbox.py) y lo envía el worker
+(worker/). Acá queda lo que ocurre dentro de un request:
+
+- acciones en vivo que el usuario elige entre lo que ofrece Jira:
+  transiciones y asignación;
+- aplicar un ticket de Jira a su caso (aplicar_issue / pull_issue), que usan
+  el webhook, las acciones en vivo y el pull periódico del worker;
+- reintentar las operaciones fallidas de un caso.
 
 Lo que llega de Jira nunca se encola, así que no hay ecos. Para no duplicar
 lo creado desde la plataforma, el ticket y los comentarios que se crean
@@ -14,36 +16,28 @@ llevan una propiedad con el id local (aisec.caso_id / aisec.comentario_id).
 """
 
 import datetime as dt
-import logging
-import math
 import re
 import time
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.casos.models import Caso, CasoComentario, CasoEstado, JiraSyncEstado, Origen
 from app.core.config import get_settings
-from app.db.session import SessionLocal, engine
 from app.integraciones.jira import mapping
-from app.integraciones.jira.client import ISSUE_FIELDS, JiraClient, JiraError
-from app.integraciones.jira.models import JiraOutbox, JiraSyncCursor, OperacionJira
-from app.integraciones.jira.outbox import pendientes
-
-logger = logging.getLogger(__name__)
+from app.integraciones.jira.client import ISSUE_FIELDS, JiraClient
+from app.integraciones.jira.models import OperacionJira
+from app.integraciones.jira.outbox import notificar, pendientes
 
 PROP_CASO = "aisec.caso_id"
 PROP_COMENTARIO = "aisec.comentario_id"
-_LOCK_SYNC = 7_241_001  # pg advisory lock: una sola sincronización a la vez
 _RE_ISSUE_KEY = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
 _RE_GDLD_EN_RESUMEN = re.compile(r"GDLD[\s\-_]*(\d+)", re.IGNORECASE)
 
 
-def _prop_id(id_: uuid.UUID) -> dict:
+def prop_id(id_: uuid.UUID) -> dict:
     # Jira sólo acepta objetos JSON como valor de una propiedad de comentario.
     return {"id": str(id_)}
 
@@ -68,7 +62,7 @@ def crear_cliente() -> JiraClient:
     return JiraClient()
 
 
-def _ahora() -> dt.datetime:
+def ahora() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
 
 
@@ -78,7 +72,7 @@ _TABLERO_TTL_SEGUNDOS = 600
 _tablero_cache: dict[int, tuple[float, str, dict[str, CasoEstado]]] = {}
 
 
-def _tablero(client: JiraClient) -> tuple[str, dict[str, CasoEstado]]:
+def tablero(client: JiraClient) -> tuple[str, dict[str, CasoEstado]]:
     """(id del filtro, status id -> columna) del tablero IA-SEC."""
     board_id = client.settings.jira_board_id
     cacheado = _tablero_cache.get(board_id)
@@ -91,59 +85,17 @@ def _tablero(client: JiraClient) -> tuple[str, dict[str, CasoEstado]]:
     return filtro_id, mapa
 
 
-def _jql_base(client: JiraClient, filtro_id: str) -> str:
+def jql_base(client: JiraClient, filtro_id: str) -> str:
     # El filtro del tablero también trae subtareas: sólo las Solicitudes son casos.
     return f"filter = {filtro_id} AND issuetype = {client.settings.jira_issue_type_id}"
 
 
-def _campos_issue(client: JiraClient) -> list[str]:
+def campos_issue(client: JiraClient) -> list[str]:
     s = client.settings
     return [*ISSUE_FIELDS, s.jira_gdld_field, s.jira_request_type_field]
 
 
-# --- pull: Jira -> plataforma ---
-
-
-@dataclass
-class ResultadoPull:
-    nuevos: int = 0
-    actualizados: int = 0
-    errores: list[str] = field(default_factory=list)
-
-
-def pull(db: Session, client: JiraClient) -> ResultadoPull:
-    filtro_id, mapa = _tablero(client)
-    cursor = db.get(JiraSyncCursor, 1) or JiraSyncCursor(id=1)
-    inicio = _ahora()
-
-    jql = _jql_base(client, filtro_id)
-    if cursor.ultimo_poll_at is not None:
-        # Relativo en minutos: el JQL con fecha absoluta se interpreta en la
-        # zona horaria del usuario de Jira. 2 minutos de margen por relojes.
-        minutos = math.ceil((inicio - cursor.ultimo_poll_at).total_seconds() / 60) + 2
-        jql += f" AND updated >= -{minutos}m"
-    jql += " ORDER BY updated ASC"
-
-    resultado = ResultadoPull()
-    for issue in client.search_jql(jql, _campos_issue(client), properties=[PROP_CASO]):
-        try:
-            nuevo = aplicar_issue(db, client, issue, mapa)
-            db.commit()
-        except JiraError as exc:
-            db.rollback()
-            resultado.errores.append(f"{issue.get('key')}: {exc}")
-            continue
-        if nuevo is True:
-            resultado.nuevos += 1
-        elif nuevo is False:
-            resultado.actualizados += 1
-
-    # Si algún ticket falló no se avanza el cursor: la próxima corrida lo vuelve a traer.
-    if not resultado.errores:
-        cursor.ultimo_poll_at = inicio
-        db.add(cursor)
-        db.commit()
-    return resultado
+# --- aplicar tickets de Jira a casos (lo usan el webhook, las acciones en vivo y el worker) ---
 
 
 def pull_issue(db: Session, client: JiraClient, issue_key: str) -> Caso | None:
@@ -151,9 +103,9 @@ def pull_issue(db: Session, client: JiraClient, issue_key: str) -> Caso | None:
     None si el ticket no es del tablero IA-SEC."""
     if not _RE_ISSUE_KEY.match(issue_key):
         raise ValueError(f"Clave de ticket inválida: {issue_key!r}")
-    filtro_id, mapa = _tablero(client)
-    jql = f'{_jql_base(client, filtro_id)} AND key = "{issue_key}"'
-    issues = client.search_jql(jql, _campos_issue(client), properties=[PROP_CASO])
+    filtro_id, mapa = tablero(client)
+    jql = f'{jql_base(client, filtro_id)} AND key = "{issue_key}"'
+    issues = client.search_jql(jql, campos_issue(client), properties=[PROP_CASO])
     if not issues:
         return None
     aplicar_issue(db, client, issues[0], mapa)
@@ -263,136 +215,14 @@ def _comentario_local(db: Session, valor: object) -> CasoComentario | None:
     return comentario if comentario is not None and comentario.jira_comment_id is None else None
 
 
-# --- push: outbox -> Jira ---
-
-
-@dataclass
-class ResultadoPush:
-    enviados: int = 0
-    errores: list[str] = field(default_factory=list)
-
-
-def _backoff(intentos: int) -> dt.timedelta:
-    return dt.timedelta(seconds=min(60 * 2 ** (intentos - 1), 3600))
-
-
-def push(db: Session, client: JiraClient, caso_id: uuid.UUID | None = None) -> ResultadoPush:
-    stmt = select(JiraOutbox).where(JiraOutbox.procesado_at.is_(None)).order_by(JiraOutbox.created_at)
-    if caso_id is not None:
-        stmt = stmt.where(JiraOutbox.caso_id == caso_id)
-    resultado = ResultadoPush()
-    bloqueados: set[uuid.UUID] = set()
-    ahora = _ahora()
-
-    for op in db.scalars(stmt).all():
-        # Las operaciones de un caso van en orden: si una no puede salir, las
-        # siguientes del mismo caso esperan.
-        if op.caso_id in bloqueados:
-            continue
-        if op.descartada or op.proximo_intento_at > ahora:
-            bloqueados.add(op.caso_id)
-            continue
-        caso = db.get(Caso, op.caso_id)
-        try:
-            _ejecutar(db, client, op, caso)
-        except JiraError as exc:
-            op.intentos += 1
-            op.ultimo_error = str(exc)
-            if exc.transitorio:
-                op.proximo_intento_at = ahora + _backoff(op.intentos)
-            else:
-                op.descartada = True
-            caso.jira_sync_estado = JiraSyncEstado.ERROR
-            caso.jira_sync_error = _mensaje_error(op, exc)
-            bloqueados.add(op.caso_id)
-            resultado.errores.append(f"{caso.id} {op.operacion.value}: {exc}")
-            logger.warning(
-                "Falló el envío a Jira",
-                extra={"caso_id": str(caso.id), "operacion": op.operacion.value, "status": exc.status_code},
-            )
-        else:
-            op.procesado_at = ahora
-            op.ultimo_error = None
-            resultado.enviados += 1
-            _recalcular_estado_sync(db, caso)
-        db.commit()
-    return resultado
-
-
-def _ejecutar(db: Session, client: JiraClient, op: JiraOutbox, caso: Caso) -> None:
-    s = client.settings
-    if op.operacion == OperacionJira.CREAR_ISSUE:
-        if caso.jira_issue_id:
-            return  # ya vinculado (lo encontró un pull por la propiedad)
-        campos: dict = {
-            "project": {"key": s.jira_project_key},
-            "issuetype": {"id": s.jira_issue_type_id},
-            "summary": mapping.formatear_resumen(caso.nombre_proyecto, caso.gdld),
-            s.jira_request_type_field: caso.jira_tipo_solicitud_id or next(iter(s.jira_request_types)),
-        }
-        if caso.gdld:
-            campos[s.jira_gdld_field] = mapping.gdld_a_jira(caso.gdld)
-        creado = client.create_issue(campos, properties={PROP_CASO: _prop_id(caso.id)})
-        caso.jira_issue_id = str(creado["id"])
-        caso.jira_issue_key = creado["key"]
-        db.flush()
-
-    elif op.operacion == OperacionJira.ACTUALIZAR_ISSUE:
-        if not caso.jira_issue_key:
-            raise JiraError("El ticket todavía no existe en Jira", status_code=409)
-        client.update_issue(
-            caso.jira_issue_key,
-            {
-                "summary": mapping.formatear_resumen(caso.nombre_proyecto, caso.gdld),
-                s.jira_gdld_field: mapping.gdld_a_jira(caso.gdld),
-            },
-        )
-
-    elif op.operacion == OperacionJira.CREAR_COMENTARIO:
-        comentario = db.get(CasoComentario, op.comentario_id) if op.comentario_id else None
-        if comentario is None or comentario.jira_comment_id:
-            return
-        if not caso.jira_issue_key:
-            raise JiraError("El ticket todavía no existe en Jira", status_code=409)
-        cuerpo = f"[AI-SEC Control – {comentario.autor_nombre}]\n{comentario.cuerpo}"
-        creado = client.add_internal_comment(
-            caso.jira_issue_key, mapping.texto_a_adf(cuerpo), properties={PROP_COMENTARIO: _prop_id(comentario.id)}
-        )
-        comentario.jira_comment_id = str(creado["id"])
-        db.flush()
-
-
-_DESCRIPCION_OP = {
-    OperacionJira.CREAR_ISSUE: "crear el ticket",
-    OperacionJira.ACTUALIZAR_ISSUE: "actualizar el ticket",
-    OperacionJira.CREAR_COMENTARIO: "publicar un comentario",
-}
-
-
-def _mensaje_error(op: JiraOutbox, exc: JiraError) -> str:
-    cuando = "se reintenta automáticamente" if exc.transitorio else "Jira lo rechazó"
-    return f"No se pudo {_DESCRIPCION_OP[op.operacion]} en Jira ({cuando}): {exc}"[:2000]
-
-
-def _recalcular_estado_sync(db: Session, caso: Caso) -> None:
-    db.flush()
-    restantes = pendientes(db, caso.id)
-    if not restantes:
-        caso.jira_sync_estado = JiraSyncEstado.OK
-        caso.jira_sync_error = None
-    elif any(op.descartada or op.ultimo_error for op in restantes):
-        caso.jira_sync_estado = JiraSyncEstado.ERROR
-    else:
-        caso.jira_sync_estado = JiraSyncEstado.PENDIENTE
-
-
 def reintentar(db: Session, caso: Caso) -> None:
     """Vuelve a poner en cola, para ya, las operaciones fallidas del caso."""
     for op in pendientes(db, caso.id):
         op.descartada = False
-        op.proximo_intento_at = _ahora()
+        op.proximo_intento_at = ahora()
     caso.jira_sync_estado = JiraSyncEstado.PENDIENTE
     caso.jira_sync_error = None
+    notificar(db, caso.id)
     db.commit()
 
 
@@ -408,7 +238,7 @@ class Transicion:
 
 
 def transiciones(client: JiraClient, caso: Caso) -> list[Transicion]:
-    _, mapa = _tablero(client)
+    _, mapa = tablero(client)
     return [
         Transicion(
             id=str(t["id"]),
@@ -476,53 +306,3 @@ def asignar(db: Session, client: JiraClient, caso: Caso, account_id: str | None)
     db.flush()
     pull_issue(db, client, caso.jira_issue_key)
     return caso
-
-
-# --- ejecución completa ---
-
-
-@contextmanager
-def _lock() -> Iterator[bool]:
-    """Advisory lock de Postgres en una conexión aparte: si ya hay una
-    sincronización corriendo (otra instancia, el scheduler y un push en
-    background a la vez), esta no hace nada."""
-    with engine.connect() as conn:
-        obtenido = bool(conn.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": _LOCK_SYNC}).scalar())
-        try:
-            yield obtenido
-        finally:
-            if obtenido:
-                conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _LOCK_SYNC})
-                conn.commit()
-
-
-@dataclass
-class ResultadoSync:
-    ejecutado: bool
-    push: ResultadoPush | None = None
-    pull: ResultadoPull | None = None
-
-
-def sincronizar(db: Session, client: JiraClient, *, hacer_pull: bool = True) -> ResultadoSync:
-    with _lock() as obtenido:
-        if not obtenido:
-            return ResultadoSync(ejecutado=False)
-        resultado_push = push(db, client)
-        resultado_pull = pull(db, client) if hacer_pull else None
-    return ResultadoSync(ejecutado=True, push=resultado_push, pull=resultado_pull)
-
-
-def push_en_background(caso_id: uuid.UUID) -> None:
-    """Empuje inmediato después de un cambio, para no esperar al scheduler.
-    Si falla no pasa nada: la operación sigue en la outbox."""
-    if not get_settings().jira_enabled:
-        return
-    db = SessionLocal()
-    try:
-        with _lock() as obtenido, crear_cliente() as client:
-            if obtenido:
-                push(db, client, caso_id=caso_id)
-    except Exception:
-        logger.exception("Falló el envío inmediato a Jira; queda en la outbox")
-    finally:
-        db.close()

@@ -26,31 +26,6 @@ def _cliente():
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
-@router.post("/sync")
-def sincronizar(
-    x_aisec_secret: str | None = Header(default=None), db: Session = Depends(get_db)
-) -> dict:
-    """Lo llama Cloud Scheduler cada pocos minutos: empuja la outbox y trae
-    los cambios de Jira."""
-    _verificar_secreto(get_settings().jira_sync_secret, x_aisec_secret)
-    with _cliente() as client:
-        try:
-            resultado = sync.sincronizar(db, client)
-        except JiraError as exc:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-    if not resultado.ejecutado:
-        return {"ejecutado": False, "motivo": "Ya hay una sincronización en curso"}
-    return {
-        "ejecutado": True,
-        "push": {"enviados": resultado.push.enviados, "errores": resultado.push.errores},
-        "pull": {
-            "nuevos": resultado.pull.nuevos,
-            "actualizados": resultado.pull.actualizados,
-            "errores": resultado.pull.errores,
-        },
-    }
-
-
 @router.post("/webhook", status_code=status.HTTP_204_NO_CONTENT)
 def webhook(
     payload: dict = Body(...),

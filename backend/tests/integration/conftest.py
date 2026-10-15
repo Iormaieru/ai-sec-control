@@ -9,6 +9,7 @@ from app.auth.service import create_user
 from app.catalog.models import Pregunta
 from app.db.session import SessionLocal, engine
 from app.main import app
+from tests.integration.fake_jira import jira  # noqa: F401  (fixture: Jira falso en memoria)
 
 
 @pytest.fixture

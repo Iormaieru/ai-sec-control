@@ -34,5 +34,25 @@ services:
       db:
         condition: service_healthy
 
+  # Sincronización con Jira. Opera sobre el Jira REAL: no arranca con un
+  # `docker compose up` común, sólo con `docker compose --profile jira up`.
+  # Requiere AISEC_JIRA_ENABLED=true y las credenciales en backend/.env.
+  worker:
+    profiles: ["jira"]
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      AISEC_DATABASE_URL: postgresql+psycopg://aisec:aisec@db:5432/aisec
+      AISEC_JWT_SECRET: dev-secret-change-me
+      AISEC_ENVIRONMENT: development
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   aisec_db_data:

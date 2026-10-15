@@ -3,19 +3,14 @@
 Útil si cambian el tablero IA-SEC, su filtro, las columnas o los tipos de
 solicitud: muestra lo que hay que ajustar en AISEC_JIRA_*.
 
-    uv run python scripts/jira_discover.py
+    python -m aisec_worker.discover
 
-Usa las credenciales de backend/.env (no requiere AISEC_JIRA_ENABLED).
+Usa las credenciales AISEC_JIRA_* (no requiere AISEC_JIRA_ENABLED).
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from app.core.config import get_settings  # noqa: E402
-from app.integraciones.jira.client import JiraClient  # noqa: E402
-from app.integraciones.jira.mapping import estados_por_status  # noqa: E402
+from app.core.config import get_settings
+from app.integraciones.jira.client import JiraClient
+from app.integraciones.jira.mapping import estados_por_status
 
 
 def main() -> None:

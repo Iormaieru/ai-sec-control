@@ -81,10 +81,9 @@ class Settings(BaseSettings):
     frontend_base_url: str = "http://localhost:5173"
     cuestionario_validez_dias: int = 15
 
-    # Integración con Jira Cloud (app/integraciones/jira). Apagada por
-    # default: la outbox no se procesa y nada sale a la red (tests, ambientes
-    # sin credenciales). Los casos igual se encolan, así que al prenderla se
-    # empujan los pendientes.
+    # Integración con Jira Cloud (app/integraciones/jira + worker/). Apagada
+    # por default: nada sale a la red (tests, ambientes sin credenciales). Los
+    # casos igual se encolan, así que al prenderla el worker envía los pendientes.
     jira_enabled: bool = False
     jira_base_url: str = "https://bancomacro.atlassian.net"
     jira_email: str | None = None
@@ -100,11 +99,13 @@ class Settings(BaseSettings):
     }
     jira_gdld_field: str = "customfield_13707"  # "Número de Tarjeta GDLD"
     jira_request_type_field: str = "customfield_10067"
-    # Secretos que deben mandar en el header X-Aisec-Secret Cloud Scheduler
-    # (POST /integraciones/jira/sync) y la regla de Jira Automation (webhook).
-    # Sin definir, el endpoint correspondiente responde 404.
-    jira_sync_secret: str | None = None
+    # Secreto que debe mandar la regla de Jira Automation en el header
+    # X-Aisec-Secret (POST /integraciones/jira/webhook). Sin definir, el
+    # endpoint responde 404.
     jira_webhook_secret: str | None = None
+    # Worker (worker/): cada cuántos segundos trae los cambios de Jira. Los
+    # cambios de la plataforma no esperan este intervalo: llegan por NOTIFY.
+    jira_sync_intervalo_segundos: int = 120
 
 
 @lru_cache

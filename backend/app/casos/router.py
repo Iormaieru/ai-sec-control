@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
@@ -33,11 +33,10 @@ router = APIRouter(prefix="/casos", tags=["casos"])
 @router.post("", response_model=CasoOut, status_code=status.HTTP_201_CREATED)
 def create_caso(
     payload: CasoCreate,
-    background: BackgroundTasks,
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> Caso:
-    caso = service.create_caso(
+    return service.create_caso(
         db,
         gdld=payload.gdld,
         empresa_responsable=payload.empresa_responsable,
@@ -45,8 +44,6 @@ def create_caso(
         tipo=payload.tipo,
         tipo_solicitud_id=payload.tipo_solicitud_id or next(iter(get_settings().jira_request_types)),
     )
-    background.add_task(sync.push_en_background, caso.id)
-    return caso
 
 
 @router.get("/equipo-jira", response_model=list[PersonaJiraOut])
@@ -79,13 +76,12 @@ def get_caso(caso: Caso = Depends(get_caso_from_path), _user: User = Depends(get
 @router.patch("/{caso_id}", response_model=CasoOut)
 def update_caso(
     payload: CasoUpdate,
-    background: BackgroundTasks,
     caso: Caso = Depends(get_caso_from_path),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> Caso:
     try:
-        caso = service.update_caso(
+        return service.update_caso(
             db,
             caso,
             gdld=payload.gdld,
@@ -96,9 +92,6 @@ def update_caso(
         )
     except service.EstadoGestionadoPorJira as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    if caso.jira_sync_estado is not None:
-        background.add_task(sync.push_en_background, caso.id)
-    return caso
 
 
 @router.post("/{caso_id}/contactos", response_model=ContactoOut, status_code=status.HTTP_201_CREATED)
@@ -132,15 +125,11 @@ def list_comentarios(caso: Caso = Depends(get_caso_from_path)) -> list[CasoComen
 @router.post("/{caso_id}/comentarios", response_model=ComentarioOut, status_code=status.HTTP_201_CREATED)
 def add_comentario(
     payload: ComentarioCreate,
-    background: BackgroundTasks,
     caso: Caso = Depends(get_caso_from_path),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> CasoComentario:
-    comentario = service.add_comentario(db, caso, cuerpo=payload.cuerpo, autor=user)
-    if caso.jira_sync_estado is not None:
-        background.add_task(sync.push_en_background, caso.id)
-    return comentario
+    return service.add_comentario(db, caso, cuerpo=payload.cuerpo, autor=user)
 
 
 def _cliente_para(caso: Caso) -> JiraClient:
@@ -180,11 +169,9 @@ def transicionar(
 
 
 @router.post("/{caso_id}/jira/reintentar", response_model=CasoOut)
-def reintentar_jira(
-    background: BackgroundTasks, caso: Caso = Depends(get_caso_from_path), db: Session = Depends(get_db)
-) -> Caso:
+def reintentar_jira(caso: Caso = Depends(get_caso_from_path), db: Session = Depends(get_db)) -> Caso:
+    """Vuelve a poner en cola los eventos fallidos del caso; los envía el worker."""
     sync.reintentar(db, caso)
-    background.add_task(sync.push_en_background, caso.id)
     return caso
 
 

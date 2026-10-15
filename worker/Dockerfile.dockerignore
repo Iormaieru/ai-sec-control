@@ -1,0 +1,8 @@
+# El contexto de build es la raíz del repo: sólo entra lo que usa el worker.
+*
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/app
+!worker/aisec_worker
+**/__pycache__
+**/*.pyc
