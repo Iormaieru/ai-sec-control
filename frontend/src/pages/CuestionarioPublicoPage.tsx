@@ -152,7 +152,7 @@ export function CuestionarioPublicoPage() {
           <div>
             <p className="mb-0 small opacity-75">{t.titulo}</p>
             <h1 className="h4 mb-0">{formulario.nombre_proyecto}</h1>
-            <p className="mb-0 small opacity-75">{formulario.empresa_responsable}</p>
+            {formulario.empresa_responsable && <p className="mb-0 small opacity-75">{formulario.empresa_responsable}</p>}
           </div>
         </div>
       </header>

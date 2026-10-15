@@ -469,3 +469,208 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ---------- Tablero de casos (columnas del tablero IA-SEC de Jira) ---------- */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 1rem;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.kanban-columna {
+  --kanban-acento: var(--macro-azul-electrico);
+  background: #e6e8eb;
+  border-radius: 0.75rem;
+  border-top: 4px solid var(--kanban-acento);
+  min-height: 12rem;
+  transition: background-color 0.15s, opacity 0.15s, box-shadow 0.15s;
+}
+.kanban-columna-en_curso {
+  --kanban-acento: #0dcaf0;
+}
+.kanban-columna-esperando_respuesta {
+  --kanban-acento: #ffc107;
+}
+.kanban-columna-hecho {
+  --kanban-acento: #198754;
+}
+.kanban-columna-valida {
+  box-shadow: inset 0 0 0 2px rgba(32, 58, 233, 0.35);
+}
+.kanban-columna-sobre {
+  background: var(--macro-celeste);
+  box-shadow: inset 0 0 0 2px var(--macro-azul-electrico);
+}
+.kanban-columna-invalida {
+  opacity: 0.45;
+}
+
+.kanban-columna-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.85rem 0.5rem;
+  font-family: var(--font-titulos);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--macro-azul);
+}
+
+.kanban-columna-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0 0.6rem 0.75rem;
+}
+
+.kanban-vacia {
+  margin: 0.5rem 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.kanban-tarjeta {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s, opacity 0.15s;
+}
+.kanban-tarjeta:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+.kanban-tarjeta:active {
+  cursor: grabbing;
+}
+.kanban-tarjeta-arrastrando {
+  opacity: 0.4;
+}
+.kanban-tarjeta-bloqueada {
+  cursor: not-allowed;
+}
+
+.kanban-tarjeta-titulo {
+  display: block;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--macro-gris);
+  text-decoration: none;
+}
+.kanban-tarjeta-titulo:hover {
+  color: var(--macro-azul-electrico);
+  text-decoration: underline;
+}
+
+.kanban-tarjeta-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #6c757d;
+}
+
+.kanban-tarjeta-status {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 1rem;
+  background: var(--macro-fondo);
+  font-size: 0.72rem;
+  color: var(--macro-gris);
+}
+
+.kanban-tarjeta-asignado {
+  margin-top: 0.5rem;
+}
+
+.kanban-tarjeta-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+.kanban-tarjeta-key {
+  font-weight: 500;
+  text-decoration: none;
+}
+.kanban-tarjeta-mover {
+  color: #6c757d;
+}
+.kanban-tarjeta-mover:hover {
+  color: var(--macro-azul-electrico);
+}
+
+/* ---------- Persona asignada (Jira) ---------- */
+.asignado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--macro-gris);
+}
+.asignado-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: #adb5bd;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.asignado-foto {
+  object-fit: cover;
+  background: var(--macro-fondo);
+}
+.asignado-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asignado-vacio {
+  color: #6c757d;
+}
+.asignado-vacio .asignado-avatar {
+  background: transparent;
+  border: 1px dashed #adb5bd;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+.asignado-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.15rem 0.4rem 0.15rem 0.15rem;
+  margin-left: -0.15rem;
+  border: 1px solid transparent;
+  border-radius: 1rem;
+  background: transparent;
+}
+.asignado-boton:hover,
+.asignado-boton:focus-visible {
+  border-color: #ced4da;
+  background: var(--macro-fondo);
+}
+.selector-asignado-lista {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.selector-asignado-lista .list-group-item.active .asignado-vacio,
+.selector-asignado-lista .list-group-item.active .asignado-nombre {
+  color: #fff;
+}

@@ -142,7 +142,7 @@ _EMAIL = {
     Idioma.ES: {
         "subject": "Cuestionario de seguridad de IA — {proyecto}",
         "saludo": "Hola {nombre}:",
-        "pedido": "Te pedimos completar el cuestionario de modelado de amenazas del proyecto {proyecto} ({empresa}).",
+        "pedido": "Te pedimos completar el cuestionario de modelado de amenazas del proyecto {proyecto}{empresa}.",
         "enlace": "Completalo desde este enlace (vence el {vence}):",
         "boton": "Completar cuestionario",
         "vence": "El enlace vence el {vence}. Podés guardar y continuar más tarde.",
@@ -151,7 +151,7 @@ _EMAIL = {
     Idioma.EN: {
         "subject": "AI security questionnaire — {proyecto}",
         "saludo": "Hello {nombre},",
-        "pedido": "Please complete the threat modeling questionnaire for the project {proyecto} ({empresa}).",
+        "pedido": "Please complete the threat modeling questionnaire for the project {proyecto}{empresa}.",
         "enlace": "Fill it in from this link (expires on {vence}):",
         "boton": "Complete questionnaire",
         "vence": "The link expires on {vence}. You can save and continue later.",
@@ -166,6 +166,11 @@ def _fecha(valor: datetime, idioma: Idioma) -> str:
     return valor.strftime("%d/%m/%Y")
 
 
+def _entre_parentesis(empresa: str | None) -> str:
+    # Los casos importados de Jira pueden no tener empresa cargada.
+    return f" ({empresa})" if empresa else ""
+
+
 def _send_invitacion_email(
     caso: Caso, contacto: Contacto, invitacion: CuestionarioInvitacion, enlace: str
 ) -> None:
@@ -174,13 +179,13 @@ def _send_invitacion_email(
     subject = t["subject"].format(proyecto=caso.nombre_proyecto)
     text = (
         f"{t['saludo'].format(nombre=contacto.nombre)}\n\n"
-        f"{t['pedido'].format(proyecto=caso.nombre_proyecto, empresa=caso.empresa_responsable)}\n\n"
+        f"{t['pedido'].format(proyecto=caso.nombre_proyecto, empresa=_entre_parentesis(caso.empresa_responsable))}\n\n"
         f"{t['enlace'].format(vence=vence)}\n{enlace}\n\n"
         f"{t['vence'].format(vence=vence)} {t['personal']}\n"
     )
     nombre = html.escape(contacto.nombre)
     proyecto = f"<strong>{html.escape(caso.nombre_proyecto)}</strong>"
-    empresa = html.escape(caso.empresa_responsable)
+    empresa = html.escape(_entre_parentesis(caso.empresa_responsable))
     body_html = f"""\
 <p>{t["saludo"].format(nombre=nombre)}</p>
 <p>{t["pedido"].format(proyecto=proyecto, empresa=empresa)}</p>

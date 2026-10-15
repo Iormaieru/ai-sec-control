@@ -36,8 +36,10 @@ def build_caso_report(db: Session, caso: Caso) -> bytes:
     document.add_heading("AI-SEC Control — Informe de modelado de amenazas", level=0)
 
     document.add_paragraph(f"Proyecto / Project: {caso.nombre_proyecto}")
-    document.add_paragraph(f"Empresa responsable / Responsible company: {caso.empresa_responsable}")
-    document.add_paragraph(f"Tipo / Type: {TIPO_LABELS.get(caso.tipo.value, caso.tipo.value)}")
+    if caso.empresa_responsable:
+        document.add_paragraph(f"Empresa responsable / Responsible company: {caso.empresa_responsable}")
+    if caso.tipo:
+        document.add_paragraph(f"Tipo / Type: {TIPO_LABELS.get(caso.tipo.value, caso.tipo.value)}")
     if caso.gdld:
         document.add_paragraph(f"GDLD {caso.gdld}")
     if clasificacion:

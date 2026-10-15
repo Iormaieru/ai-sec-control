@@ -14,12 +14,10 @@ export interface TokenResponse {
 }
 
 export type CasoTipo = "candidato" | "ingresado" | "herramienta_tercero";
-export type CasoEstado =
-  | "abierto"
-  | "en_analisis"
-  | "esperando_proveedor"
-  | "cerrado_aprobado"
-  | "rechazado";
+/** Columnas del tablero IA-SEC de Jira. */
+export type CasoEstado = "por_hacer" | "en_curso" | "esperando_respuesta" | "hecho";
+export type Origen = "plataforma" | "jira";
+export type JiraSyncEstado = "ok" | "pendiente" | "error";
 
 export interface Contacto {
   id: string;
@@ -31,13 +29,54 @@ export interface Contacto {
 export interface Caso {
   id: string;
   gdld: string | null;
-  empresa_responsable: string;
+  empresa_responsable: string | null;
   nombre_proyecto: string;
-  tipo: CasoTipo;
+  tipo: CasoTipo | null;
   estado: CasoEstado;
+  origen: Origen;
+  jira_issue_key: string | null;
+  jira_url: string | null;
+  jira_status_nombre: string | null;
+  jira_tipo_solicitud_id: string | null;
+  /** Persona asignada al ticket en Jira (accountId de Atlassian). */
+  jira_asignado_id: string | null;
+  jira_asignado_nombre: string | null;
+  jira_asignado_avatar_url: string | null;
+  /** null: caso anterior a la integración, no está en Jira. */
+  jira_sync_estado: JiraSyncEstado | null;
+  jira_sync_error: string | null;
   created_at: string;
   updated_at: string;
   contactos: Contacto[];
+}
+
+export interface Comentario {
+  id: string;
+  cuerpo: string;
+  autor_nombre: string;
+  origen: Origen;
+  /** Visible para el solicitante en el portal de Jira. */
+  publico: boolean;
+  jira_comment_id: string | null;
+  fecha: string;
+}
+
+export interface Transicion {
+  id: string;
+  nombre: string;
+  destino: string;
+  estado: CasoEstado;
+}
+
+export interface PersonaJira {
+  account_id: string;
+  nombre: string;
+  avatar_url: string | null;
+}
+
+export interface TipoSolicitud {
+  id: string;
+  nombre: string;
 }
 
 export type RespuestaValor = "SI" | "NO" | "NA_ARQ" | "NA_FASE" | "PENDIENTE";
@@ -206,7 +245,7 @@ export interface PentestResumen {
   id: string;
   caso_id: string;
   caso_nombre: string;
-  empresa_responsable: string;
+  empresa_responsable: string | null;
   estandar_id: string;
   estandar_codigo: string;
   estandar_nombre: string;
@@ -237,8 +276,8 @@ export interface PeriodoCantidad {
 export interface ModeladoCaso {
   caso_id: string;
   nombre_proyecto: string;
-  empresa_responsable: string;
-  tipo: CasoTipo;
+  empresa_responsable: string | null;
+  tipo: CasoTipo | null;
   compliance_pct: number;
   residual_pct: number;
   completitud_pct: number;
@@ -311,7 +350,7 @@ export interface PreguntaFormulario {
 export interface Formulario {
   idioma: Idioma;
   nombre_proyecto: string;
-  empresa_responsable: string;
+  empresa_responsable: string | null;
   contacto_nombre: string;
   expira_at: string;
   preguntas: PreguntaFormulario[];

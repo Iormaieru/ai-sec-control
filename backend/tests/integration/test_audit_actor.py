@@ -47,7 +47,7 @@ def test_el_actor_de_un_update_es_quien_lo_hace_y_no_quien_creo(
         headers=auth_headers,
     ).json()
 
-    client.patch(f"/casos/{caso['id']}", json={"estado": "en_analisis"}, headers=auth_headers)
+    client.patch(f"/casos/{caso['id']}", json={"nombre_proyecto": "Editado 2"}, headers=auth_headers)
 
     db.expire_all()
     update = (

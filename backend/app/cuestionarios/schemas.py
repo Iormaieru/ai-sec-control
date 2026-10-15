@@ -53,7 +53,7 @@ class PreguntaFormularioOut(BaseModel):
 class FormularioOut(BaseModel):
     idioma: Idioma
     nombre_proyecto: str
-    empresa_responsable: str
+    empresa_responsable: str | None
     contacto_nombre: str
     expira_at: datetime
     preguntas: list[PreguntaFormularioOut]

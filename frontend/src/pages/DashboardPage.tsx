@@ -234,8 +234,8 @@ function DashboardContent({ metricas }: { metricas: Metricas }) {
                       <td>
                         <Link to={`/casos/${c.caso_id}/preguntas`}>{c.nombre_proyecto}</Link>
                       </td>
-                      <td>{c.empresa_responsable}</td>
-                      <td>{TIPO_LABELS[c.tipo]}</td>
+                      <td>{c.empresa_responsable ?? "—"}</td>
+                      <td>{c.tipo ? TIPO_LABELS[c.tipo] : "—"}</td>
                       <td className="text-end">{formatPct(c.compliance_pct)}</td>
                       <td className="text-end">{formatPct(c.residual_pct)}</td>
                       <td className="text-end">{formatPct(c.completitud_pct)}</td>

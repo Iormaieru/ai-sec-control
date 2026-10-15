@@ -43,13 +43,14 @@ def _casos_filters(desde: date | None, hasta: date | None, tipo: CasoTipo | None
 def _proyectos_ingresados(db: Session, filters: list) -> ProyectosIngresados:
     por_tipo_rows = db.execute(select(Caso.tipo, func.count()).where(*filters).group_by(Caso.tipo)).all()
     por_tipo = {t.value: 0 for t in CasoTipo}
-    por_tipo.update({tipo.value: cantidad for tipo, cantidad in por_tipo_rows})
+    # Los casos importados de Jira pueden no tener tipo todavía.
+    por_tipo.update({tipo.value: cantidad for tipo, cantidad in por_tipo_rows if tipo is not None})
 
     mes = func.to_char(Caso.created_at, "YYYY-MM")
     por_mes_rows = db.execute(select(mes, func.count()).where(*filters).group_by(mes).order_by(mes)).all()
 
     return ProyectosIngresados(
-        total=sum(por_tipo.values()),
+        total=sum(cantidad for _, cantidad in por_tipo_rows),
         por_tipo=por_tipo,
         por_mes=[PeriodoCantidad(periodo=p, cantidad=c) for p, c in por_mes_rows],
     )
@@ -61,10 +62,11 @@ def _analisis(db: Session, filters: list) -> Analisis:
 
     casos_por_tipo: dict[str, set] = {t.value: set() for t in CasoTipo}
     for caso_id, tipo in rows:
-        casos_por_tipo[tipo.value].add(caso_id)
+        if tipo is not None:
+            casos_por_tipo[tipo.value].add(caso_id)
 
     return Analisis(
-        casos_analizados=sum(len(ids) for ids in casos_por_tipo.values()),
+        casos_analizados=len({caso_id for caso_id, _ in rows}),
         documentos_analizados=len(rows),
         por_tipo={tipo: len(ids) for tipo, ids in casos_por_tipo.items()},
     )
@@ -83,7 +85,7 @@ def _modelados(db: Session, filters: list) -> Modelados:
                 caso_id=caso.id,
                 nombre_proyecto=caso.nombre_proyecto,
                 empresa_responsable=caso.empresa_responsable,
-                tipo=caso.tipo.value,
+                tipo=caso.tipo.value if caso.tipo else None,
                 compliance_pct=g.compliance_pct,
                 residual_pct=g.residual_pct,
                 completitud_pct=g.completitud_pct,

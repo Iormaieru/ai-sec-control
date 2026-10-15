@@ -17,7 +17,8 @@ def _create_caso(client: TestClient, auth_headers: dict[str, str], **overrides) 
 def test_create_and_get_caso(client: TestClient, auth_headers: dict[str, str]) -> None:
     created = _create_caso(client, auth_headers)
 
-    assert created["estado"] == "abierto"
+    assert created["estado"] == "por_hacer"
+    assert created["jira_sync_estado"] == "pendiente"  # se crea también en Jira
     assert created["gdld"] == "123"  # se guarda sólo el número
 
     response = client.get(f"/casos/{created['id']}", headers=auth_headers)
@@ -49,34 +50,22 @@ def test_list_casos_filters_by_estado_and_tipo(client: TestClient, auth_headers:
     assert results[0]["empresa_responsable"] == "Empresa B"
 
 
-def test_update_caso_valid_transition(client: TestClient, auth_headers: dict[str, str]) -> None:
-    caso = _create_caso(client, auth_headers)
+def test_create_caso_sin_empresa_ni_tipo(client: TestClient, auth_headers: dict[str, str]) -> None:
+    created = _create_caso(client, auth_headers, empresa_responsable=None, tipo=None)
 
-    response = client.patch(f"/casos/{caso['id']}", json={"estado": "en_analisis"}, headers=auth_headers)
-
-    assert response.status_code == 200
-    assert response.json()["estado"] == "en_analisis"
+    assert created["empresa_responsable"] is None
+    assert created["tipo"] is None
 
 
-def test_update_caso_invalid_transition_rejected(client: TestClient, auth_headers: dict[str, str]) -> None:
-    caso = _create_caso(client, auth_headers)  # estado inicial: abierto
+def test_update_caso_completa_empresa_y_tipo(client: TestClient, auth_headers: dict[str, str]) -> None:
+    caso = _create_caso(client, auth_headers, empresa_responsable=None, tipo=None)
 
-    # abierto -> cerrado_aprobado no está permitido (debe pasar por en_analisis)
     response = client.patch(
-        f"/casos/{caso['id']}", json={"estado": "cerrado_aprobado"}, headers=auth_headers
+        f"/casos/{caso['id']}", json={"empresa_responsable": "ACME", "tipo": "ingresado"}, headers=auth_headers
     )
 
-    assert response.status_code == 400
-
-
-def test_terminal_state_has_no_further_transitions(client: TestClient, auth_headers: dict[str, str]) -> None:
-    caso = _create_caso(client, auth_headers)
-    client.patch(f"/casos/{caso['id']}", json={"estado": "en_analisis"}, headers=auth_headers)
-    client.patch(f"/casos/{caso['id']}", json={"estado": "rechazado"}, headers=auth_headers)
-
-    response = client.patch(f"/casos/{caso['id']}", json={"estado": "en_analisis"}, headers=auth_headers)
-
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert (response.json()["empresa_responsable"], response.json()["tipo"]) == ("ACME", "ingresado")
 
 
 def test_add_and_remove_contacto(client: TestClient, auth_headers: dict[str, str]) -> None:

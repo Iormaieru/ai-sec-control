@@ -81,6 +81,31 @@ class Settings(BaseSettings):
     frontend_base_url: str = "http://localhost:5173"
     cuestionario_validez_dias: int = 15
 
+    # Integración con Jira Cloud (app/integraciones/jira). Apagada por
+    # default: la outbox no se procesa y nada sale a la red (tests, ambientes
+    # sin credenciales). Los casos igual se encolan, así que al prenderla se
+    # empujan los pendientes.
+    jira_enabled: bool = False
+    jira_base_url: str = "https://bancomacro.atlassian.net"
+    jira_email: str | None = None
+    jira_api_token: str | None = None
+    jira_project_key: str = "MDA"
+    jira_issue_type_id: str = "11144"  # "Solicitudes" (Jira Service Management)
+    jira_board_id: int = 12753  # tablero IA-SEC: su filtro define qué tickets son casos
+    # Id -> nombre de los "Tipo de solicitud" (customfield_10067) que se
+    # ofrecen al crear un caso; el primero es el default.
+    jira_request_types: dict[str, str] = {
+        "243": "Revisión Seguridad IA",
+        "544": "Soporte a Implementaciones / Req. Menores IA",
+    }
+    jira_gdld_field: str = "customfield_13707"  # "Número de Tarjeta GDLD"
+    jira_request_type_field: str = "customfield_10067"
+    # Secretos que deben mandar en el header X-Aisec-Secret Cloud Scheduler
+    # (POST /integraciones/jira/sync) y la regla de Jira Automation (webhook).
+    # Sin definir, el endpoint correspondiente responde 404.
+    jira_sync_secret: str | None = None
+    jira_webhook_secret: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

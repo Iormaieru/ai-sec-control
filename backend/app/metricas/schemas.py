@@ -28,8 +28,8 @@ class Analisis(BaseModel):
 class ModeladoCaso(BaseModel):
     caso_id: uuid.UUID
     nombre_proyecto: str
-    empresa_responsable: str
-    tipo: str
+    empresa_responsable: str | None
+    tipo: str | None
     compliance_pct: float
     residual_pct: float
     completitud_pct: float
