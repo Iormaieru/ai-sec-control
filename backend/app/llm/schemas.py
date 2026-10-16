@@ -31,3 +31,27 @@ class RecommendedQuestion(BaseModel):
 class DocumentAnalysisResult(BaseModel):
     clasificacion: str
     preguntas_recomendadas: list[RecommendedQuestion]
+
+
+class ToolSummary(BaseModel):
+    """Una herramienta de pentesting descubierta, para que el LLM decida en
+    qué pasos de los estándares sirve."""
+
+    nombre: str
+    descripcion: str | None
+    temas: list[str]
+    readme: str | None  # extracto
+
+
+class StepSummary(BaseModel):
+    """Un paso de un estándar de pentesting (OWASP LLM, ML, ATLAS, ...)."""
+
+    codigo: str  # "LLM01", "ML01", "AML.TA0005", ...
+    estandar: str
+    titulo: str
+    descripcion: str | None
+
+
+class SuggestedStep(BaseModel):
+    codigo: str
+    justificacion: str

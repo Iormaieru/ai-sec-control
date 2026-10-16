@@ -10,7 +10,15 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.llm.base import LLMProvider
-from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, DocumentImage, RecommendedQuestion
+from app.llm.schemas import (
+    CatalogQuestionSummary,
+    DocumentAnalysisResult,
+    DocumentImage,
+    RecommendedQuestion,
+    StepSummary,
+    SuggestedStep,
+    ToolSummary,
+)
 
 SYSTEM_PROMPT = (
     "Sos un analista de seguridad de IA del área AI-SEC de un banco. Se te da el texto de un "
@@ -23,6 +31,26 @@ SYSTEM_PROMPT = (
     "concretas y accionables de cómo debería responderla el equipo del proyecto, en español y en "
     "inglés. No recomiendes preguntas que no tengan relación clara con lo que describe el documento."
 )
+
+
+TOOL_STEPS_PROMPT = (
+    "Sos un pentester senior del área AI-SEC de un banco. Se te da una herramienta de seguridad "
+    "(nombre, descripción, temas de GitHub y un extracto de su README) y la lista de pasos de los "
+    "estándares de pentesting que usa el área (OWASP Top 10 LLM, OWASP ML Top 10, MITRE ATLAS, red "
+    "teaming de IA, robustez adversaria y OWASP Top 10 web). Indicá en qué pasos la herramienta sirve "
+    "de forma directa para ejecutar o automatizar la prueba, con una justificación de una oración en "
+    "español. Sé estricto: no incluyas pasos donde la relación sea tangencial, y si la herramienta no "
+    "es de pentesting (una lista de enlaces, un curso, un laboratorio), devolvé una lista vacía."
+)
+
+
+class _LLMSuggestedStep(BaseModel):
+    codigo: str
+    justificacion: str
+
+
+class _LLMToolStepsResponse(BaseModel):
+    pasos: list[_LLMSuggestedStep]
 
 
 class _LLMRecommendedQuestion(BaseModel):
@@ -104,3 +132,23 @@ class OpenAIProvider(LLMProvider):
             if q.aplica
         ]
         return DocumentAnalysisResult(clasificacion=parsed.clasificacion, preguntas_recomendadas=recomendadas)
+
+    def suggest_tool_steps(self, tool: ToolSummary, steps: list[StepSummary]) -> list[SuggestedStep]:
+        contenido = (
+            f"Herramienta (JSON):\n{tool.model_dump_json()}\n\n"
+            f"Pasos de los estándares (JSON):\n{json.dumps([s.model_dump() for s in steps], ensure_ascii=False)}"
+        )
+        completion = self._client.chat.completions.parse(
+            model=self._model,
+            temperature=0,
+            seed=42,
+            messages=[
+                {"role": "system", "content": TOOL_STEPS_PROMPT},
+                {"role": "user", "content": contenido},
+            ],
+            response_format=_LLMToolStepsResponse,
+        )
+        parsed = completion.choices[0].message.parsed
+        if parsed is None:
+            raise RuntimeError("El proveedor no devolvió una respuesta parseable.")
+        return [SuggestedStep(codigo=p.codigo, justificacion=p.justificacion) for p in parsed.pasos]

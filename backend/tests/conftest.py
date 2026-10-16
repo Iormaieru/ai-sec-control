@@ -59,3 +59,10 @@ def _test_database_ready() -> None:
     alembic_cfg = Config(str(backend_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(backend_dir / "alembic"))
     command.upgrade(alembic_cfg, "head")
+    # El catálogo inicial de herramientas (migración a1c2d3e4f5a6) se borra
+    # entre tests: se arranca sin él para que ningún test dependa del orden.
+    # tests/integration/test_herramientas_catalogo_inicial.py lo vuelve a cargar.
+    from app.db.session import engine
+
+    with engine.begin() as conn:
+        conn.execute(text("TRUNCATE TABLE herramientas_pentest, herramienta_pasos, distribuciones CASCADE"))

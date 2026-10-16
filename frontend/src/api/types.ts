@@ -174,11 +174,101 @@ export interface Dominio {
 
 export type Severidad = "baja" | "media" | "alta" | "critica";
 
+export type TipoHerramienta = "ia" | "especializada";
+/** candidata = en el Radar; activa / en_observacion / retirada = Catálogo. */
+export type EstadoHerramienta = "candidata" | "activa" | "en_observacion" | "retirada" | "descartada";
+export type Senal = "verde" | "amarillo" | "rojo" | "sin_datos";
+
+export interface VinculoPaso {
+  paso_id: string;
+  paso_codigo: string | null;
+  paso_titulo: string;
+  estandar_id: string;
+  estandar_codigo: string;
+  estandar_nombre: string;
+  origen: "curado" | "sugerido_ia" | "analista";
+  estado: "sugerido" | "confirmado";
+  justificacion: string | null;
+}
+
+export interface EnDistribucion {
+  distribucion: string;
+  paquete: string;
+  version: string;
+  categorias: string[];
+}
+
 export interface HerramientaPentest {
   id: string;
   nombre: string;
   descripcion: string | null;
   url_referencia: string | null;
+  tipo: TipoHerramienta;
+  estado: EstadoHerramienta;
+  motivo_estado: string | null;
+  origen: string;
+  repo_github: string | null;
+  paquete: string | null;
+  documentacion_url: string | null;
+  notas_version_url: string | null;
+  licencia: string | null;
+  version: string | null;
+  estrellas: number | null;
+  ultima_actividad: string | null;
+  archivada: boolean;
+  temas: string[];
+  distribuciones: EnDistribucion[];
+  /** mantenida, adoptada, instalable, licencia. */
+  senales: Record<string, Senal>;
+  revisada_at: string | null;
+  novedad: string | null;
+  created_at: string;
+  pasos: VinculoPaso[];
+}
+
+export interface HerramientaDePaso {
+  id: string;
+  nombre: string;
+  tipo: TipoHerramienta;
+  estado: EstadoHerramienta;
+  documentacion_url: string | null;
+  justificacion: string | null;
+}
+
+export interface CategoriaDistribucion {
+  codigo: string;
+  nombre: string;
+  cantidad: number;
+  destacadas: string[];
+}
+
+export interface Distribucion {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  sitio_url: string | null;
+  documentacion_url: string | null;
+  version: string | null;
+  cantidad_herramientas: number | null;
+  categorias: CategoriaDistribucion[];
+  revisada_at: string | null;
+}
+
+export interface RevisionHerramientas {
+  id: string;
+  estado: "solicitada" | "en_curso" | "ok" | "con_errores";
+  iniciada_at: string;
+  finalizada_at: string | null;
+  resumen: Record<string, number>;
+  errores: string[];
+}
+
+export interface EstadoRevision {
+  ultima: RevisionHerramientas | null;
+  pendiente: RevisionHerramientas | null;
+  proxima_estimada: string | null;
+  candidatas: number;
 }
 
 export interface HerramientaRef {

@@ -141,12 +141,12 @@ def test_hallucinated_or_malformed_pregunta_ids_are_dropped_not_crashed(
     import uuid as uuid_mod
 
     from app.catalog.models import Pregunta
-    from app.llm.base import LLMProvider
+    from app.llm.providers.mock_provider import MockProvider
     from app.llm.schemas import DocumentAnalysisResult, RecommendedQuestion
 
     pregunta_real = db.query(Pregunta).first()
 
-    class HallucinatingProvider(LLMProvider):
+    class HallucinatingProvider(MockProvider):
         def analyze_document(self, document_text, catalog, images=None):
             return DocumentAnalysisResult(
                 clasificacion="Clasificación de prueba",
@@ -193,12 +193,12 @@ def test_imagenes_del_documento_llegan_al_llm_provider(
     no perderse silenciosamente (regresión: antes sólo se extraía texto)."""
     import pymupdf
 
-    from app.llm.base import LLMProvider
+    from app.llm.providers.mock_provider import MockProvider
     from app.llm.schemas import DocumentAnalysisResult
 
     imagenes_recibidas = []
 
-    class CapturingProvider(LLMProvider):
+    class CapturingProvider(MockProvider):
         def analyze_document(self, document_text, catalog, images=None):
             imagenes_recibidas.extend(images or [])
             return DocumentAnalysisResult(clasificacion="Test", preguntas_recomendadas=[])
@@ -236,12 +236,12 @@ def test_pregunta_recomendada_dos_veces_no_rompe_el_analisis(
     la relación `respuesta` vacía en memoria -> AttributeError -> 500. Se
     toma una sola vez, con las instrucciones de la última aparición."""
     from app.catalog.models import Pregunta
-    from app.llm.base import LLMProvider
+    from app.llm.providers.mock_provider import MockProvider
     from app.llm.schemas import DocumentAnalysisResult, RecommendedQuestion
 
     pregunta = db.query(Pregunta).first()
 
-    class RepeatingProvider(LLMProvider):
+    class RepeatingProvider(MockProvider):
         def analyze_document(self, document_text, catalog, images=None):
             return DocumentAnalysisResult(
                 clasificacion="Clasificación de prueba",

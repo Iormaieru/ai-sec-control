@@ -8,7 +8,14 @@ llm/factory.py debería importar un provider concreto."""
 
 from abc import ABC, abstractmethod
 
-from app.llm.schemas import CatalogQuestionSummary, DocumentAnalysisResult, DocumentImage
+from app.llm.schemas import (
+    CatalogQuestionSummary,
+    DocumentAnalysisResult,
+    DocumentImage,
+    StepSummary,
+    SuggestedStep,
+    ToolSummary,
+)
 
 
 class LLMProvider(ABC):
@@ -26,4 +33,11 @@ class LLMProvider(ABC):
         `catalog` aplican, con instrucciones de cómo responder cada una en
         español e inglés. Un proveedor sin soporte de imágenes puede
         ignorar `images` sin romper el contrato."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def suggest_tool_steps(self, tool: ToolSummary, steps: list[StepSummary]) -> list[SuggestedStep]:
+        """Propone en qué pasos de `steps` sirve la herramienta `tool`, con
+        una justificación breve en español. Es sólo una sugerencia: un
+        analista la confirma al aprobar la herramienta en el Radar."""
         raise NotImplementedError

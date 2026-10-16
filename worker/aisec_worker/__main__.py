@@ -5,12 +5,17 @@
 - Cambios en Jira: cada AISEC_JIRA_SYNC_INTERVALO_SEGUNDOS trae los tickets
   del tablero que cambiaron (Jira no avisa). En esa vuelta también envía
   cualquier evento que haya quedado pendiente (aviso perdido, reintentos).
+- Herramientas de pentesting (en un hilo aparte, para no frenar a Jira): cada
+  AISEC_HERRAMIENTAS_REVISION_DIAS revisa el Catálogo, las distribuciones y
+  descubre candidatas para el Radar; también cuando se pide "revisar ahora".
+  Con Jira deshabilitado, el worker sigue corriendo sólo con esta tarea.
 
 Un error en una vuelta (Jira caído, timeout, base reiniciando) se loguea y
 se reintenta en la siguiente. El proceso termina con SIGTERM (redeploy) o
 Ctrl+C después de completar la vuelta en curso.
 
-Opciones: --una-vez (una sola vuelta completa y sale, para pruebas).
+Opciones: --una-vez (una vuelta de Jira y sale) y --herramientas (una
+revisión de herramientas completa ya, y sale). Para pruebas.
 """
 
 import argparse
@@ -31,13 +36,21 @@ from app.core.logging import configure_logging
 from app.db.session import SessionLocal, engine
 from app.integraciones.jira import sync
 from app.integraciones.jira.outbox import CANAL
+from app.llm.base import LLMProvider
+from app.llm.factory import get_llm_provider
+from app.pentesting.models import RevisionHerramientas
 
+from aisec_worker.herramientas.fuentes import Distribuciones, GitHub, Registros
+from aisec_worker.herramientas.revision import Fuentes, debe_revisar, revisar
 from aisec_worker.pull import pull
 from aisec_worker.push import push
 
 logger = logging.getLogger("aisec_worker")
 
-_LOCK = 7_241_001  # pg advisory lock: una sola vuelta a la vez (durante un redeploy conviven dos workers)
+# pg advisory locks: una sola vuelta de cada tarea a la vez (durante un redeploy conviven dos workers).
+_LOCK = 7_241_001
+_LOCK_HERRAMIENTAS = 7_241_002
+_CHEQUEO_HERRAMIENTAS = 300  # cada cuánto se fija si toca revisar herramientas (o si lo pidieron)
 _INTERVALO_MINIMO = 30
 _ESPERA_MAXIMA = 5  # cada cuánto se revisa si llegó la señal de apagado
 
@@ -45,14 +58,14 @@ _detener = threading.Event()
 
 
 @contextmanager
-def _lock() -> Iterator[bool]:
+def _lock(clave: int = _LOCK) -> Iterator[bool]:
     with engine.connect() as conn:
-        obtenido = bool(conn.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": _LOCK}).scalar())
+        obtenido = bool(conn.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": clave}).scalar())
         try:
             yield obtenido
         finally:
             if obtenido:
-                conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _LOCK})
+                conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": clave})
                 conn.commit()
 
 
@@ -123,7 +136,79 @@ class Escucha:
             self._conn = None
 
 
+# --- herramientas de pentesting ---
+
+
+def _proveedor_llm() -> LLMProvider | None:
+    try:
+        return get_llm_provider()
+    except Exception:
+        # Sin LLM las candidatas entran igual al Radar, sin vínculos sugeridos.
+        logger.warning("Sin proveedor LLM: las candidatas no tendrán vínculos sugeridos", exc_info=True)
+        return None
+
+
+def revisar_herramientas(*, forzar: bool = False) -> RevisionHerramientas | None:
+    """Corre la revisión si corresponde (o si `forzar`). None si no tocaba
+    o si otra instancia la está corriendo."""
+    settings = get_settings()
+    with _lock(_LOCK_HERRAMIENTAS) as obtenido:
+        if not obtenido:
+            return None
+        db = SessionLocal()
+        fuentes = Fuentes(GitHub(settings.github_token), Registros(), Distribuciones())
+        try:
+            pendiente = debe_revisar(db, settings.herramientas_revision_dias)
+            if not (pendiente or forzar):
+                return None
+            logger.info("Revisión de herramientas iniciada")
+            revision = revisar(
+                db,
+                fuentes,
+                _proveedor_llm(),
+                revision=pendiente if isinstance(pendiente, RevisionHerramientas) else None,
+                detener=_detener.is_set,
+            )
+            logger.info(
+                "Revisión de herramientas",
+                extra={"estado": revision.estado.value, **revision.resumen, "errores": len(revision.errores)},
+            )
+            for error in revision.errores:
+                logger.warning("Error en la revisión de herramientas", extra={"detalle": error})
+            return revision
+        finally:
+            for cliente in (fuentes.github, fuentes.registros, fuentes.distribuciones):
+                cliente.close()
+            db.close()
+
+
+def _tarea_herramientas() -> None:
+    while not _detener.is_set():
+        try:
+            revisar_herramientas()
+        except Exception:
+            logger.exception("Falló la revisión de herramientas; se reintenta más tarde")
+        _detener.wait(_CHEQUEO_HERRAMIENTAS)
+
+
+# --- loop principal ---
+
+
 def correr(intervalo: int) -> None:
+    herramientas = threading.Thread(target=_tarea_herramientas, name="herramientas")
+    herramientas.start()
+    try:
+        if get_settings().jira_enabled:
+            _correr_jira(intervalo)
+        else:
+            logger.warning("Integración con Jira deshabilitada: el worker sólo revisa herramientas")
+            _detener.wait()
+    finally:
+        _detener.set()
+        herramientas.join()
+
+
+def _correr_jira(intervalo: int) -> None:
     escucha = Escucha(get_settings().database_url)
     logger.info("Worker de sincronización con Jira iniciado", extra={"intervalo_segundos": intervalo})
     proximo_pull = 0.0
@@ -161,11 +246,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m aisec_worker", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--una-vez", action="store_true", help="una sola vuelta completa (push + pull) y sale")
+    parser.add_argument("--una-vez", action="store_true", help="una sola vuelta de Jira (push + pull) y sale")
+    parser.add_argument("--herramientas", action="store_true", help="una revisión de herramientas completa y sale")
     args = parser.parse_args()
 
     settings = get_settings()
     configure_logging(settings)
+    if args.herramientas:
+        revisar_herramientas(forzar=True)
+        return
     if args.una_vez:
         try:
             vuelta(con_pull=True)

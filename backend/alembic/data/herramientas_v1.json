@@ -1,0 +1,245 @@
+{
+  "_nota": "Catálogo inicial de herramientas (tasks/herramientas-radar.md, H4). Snapshot congelado: los cambios posteriores los hace el worker (revisión cada 15 días) o un analista desde la plataforma. URLs verificadas el 2026-10-16. Los vínculos referencian pasos por su código (LLM01, ML01, DL02, RT04, A03, AML.TA0005...).",
+  "herramientas": [
+    {
+      "nombre": "garak",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Escáner de vulnerabilidades para LLM de NVIDIA. Lanza baterías de sondas (prompt injection, jailbreaks, fuga de datos, toxicidad, alucinación de paquetes, codificaciones) contra un modelo o endpoint y reporta qué ataques prosperaron.",
+      "url_referencia": "https://github.com/NVIDIA/garak",
+      "repo_github": "NVIDIA/garak",
+      "paquete": "pypi:garak",
+      "documentacion_url": "https://reference.garak.ai/en/latest/",
+      "notas_version_url": "https://github.com/NVIDIA/garak/releases",
+      "pasos": [
+        {"paso": "LLM01", "nota": "Sondas de prompt injection directa e indirecta"},
+        {"paso": "LLM02", "nota": "Sondas de fuga y reproducción de datos de entrenamiento"},
+        {"paso": "LLM05", "nota": "Sondas de salida insegura (XSS, exfiltración por markdown)"},
+        {"paso": "LLM07", "nota": "Extracción del system prompt"},
+        {"paso": "LLM09", "nota": "Alucinación de paquetes y desinformación"},
+        {"paso": "RT03", "nota": "Barrido automático del comportamiento del modelo"},
+        {"paso": "RT04", "nota": "Jailbreaks conocidos (DAN, codificaciones, GCG)"},
+        {"paso": "RT05", "nota": "Inyección indirecta"},
+        {"paso": "RT08", "nota": "Toxicidad y contenido dañino"},
+        {"paso": "AML.TA0005", "nota": "Ejecución mediante prompt injection (AML.T0051)"}
+      ]
+    },
+    {
+      "nombre": "PyRIT",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Python Risk Identification Tool de Microsoft: framework para automatizar red teaming de IA generativa con orquestadores de ataques multi-turno, conversores de prompts y evaluadores (scorers) de las respuestas.",
+      "url_referencia": "https://github.com/microsoft/PyRIT",
+      "repo_github": "microsoft/PyRIT",
+      "paquete": "pypi:pyrit",
+      "documentacion_url": "https://microsoft.github.io/PyRIT/",
+      "notas_version_url": "https://github.com/microsoft/PyRIT/releases",
+      "pasos": [
+        {"paso": "LLM01", "nota": "Orquestadores de prompt injection"},
+        {"paso": "LLM02", "nota": "Escenarios de extracción de información sensible"},
+        {"paso": "LLM07", "nota": "Extracción del system prompt"},
+        {"paso": "RT03", "nota": "Exploración multi-turno del comportamiento"},
+        {"paso": "RT04", "nota": "Jailbreaks multi-turno (Crescendo, PAIR, TAP)"},
+        {"paso": "RT05", "nota": "Inyección indirecta (XPIA)"},
+        {"paso": "RT06", "nota": "Exfiltración de datos"},
+        {"paso": "RT08", "nota": "Evaluadores de contenido dañino"},
+        {"paso": "RT10", "nota": "Re-test automatizable de los hallazgos"},
+        {"paso": "AML.TA0005", "nota": "Ejecución mediante prompt injection (AML.T0051)"}
+      ]
+    },
+    {
+      "nombre": "promptfoo",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Herramienta de evaluación y red teaming para aplicaciones LLM, agentes y RAG. Genera ataques adaptados a la aplicación (plugins por riesgo OWASP LLM) y se integra a CI/CD para re-testear.",
+      "url_referencia": "https://github.com/promptfoo/promptfoo",
+      "repo_github": "promptfoo/promptfoo",
+      "paquete": "npm:promptfoo",
+      "documentacion_url": "https://www.promptfoo.dev/docs/red-team/",
+      "notas_version_url": "https://github.com/promptfoo/promptfoo/releases",
+      "pasos": [
+        {"paso": "LLM01", "nota": "Plugins de prompt injection"},
+        {"paso": "LLM02", "nota": "Divulgación de PII e información sensible"},
+        {"paso": "LLM05", "nota": "Manejo inseguro de la salida"},
+        {"paso": "LLM06", "nota": "Agencia excesiva en agentes y herramientas"},
+        {"paso": "LLM07", "nota": "Filtración del system prompt"},
+        {"paso": "LLM09", "nota": "Alucinaciones y desinformación"},
+        {"paso": "LLM10", "nota": "Consumo ilimitado"},
+        {"paso": "RT04", "nota": "Estrategias de jailbreak"},
+        {"paso": "RT05", "nota": "Inyección indirecta en RAG"},
+        {"paso": "RT06", "nota": "Exfiltración de datos"},
+        {"paso": "RT07", "nota": "Abuso de herramientas y agencia"},
+        {"paso": "RT08", "nota": "Contenido dañino"},
+        {"paso": "RT09", "nota": "Disponibilidad y costos"},
+        {"paso": "RT10", "nota": "Re-test en CI/CD"}
+      ]
+    },
+    {
+      "nombre": "Adversarial Robustness Toolbox",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Librería de IBM / Linux Foundation AI para evaluar y defender modelos de ML frente a evasión, envenenamiento, extracción e inferencia. Soporta TensorFlow, PyTorch, scikit-learn y otros frameworks.",
+      "url_referencia": "https://github.com/Trusted-AI/adversarial-robustness-toolbox",
+      "repo_github": "Trusted-AI/adversarial-robustness-toolbox",
+      "paquete": "pypi:adversarial-robustness-toolbox",
+      "documentacion_url": "https://adversarial-robustness-toolbox.readthedocs.io/en/latest/",
+      "notas_version_url": "https://github.com/Trusted-AI/adversarial-robustness-toolbox/releases",
+      "pasos": [
+        {"paso": "ML01", "nota": "Ataques de evasión (FGSM, PGD, C&W, HopSkipJump)"},
+        {"paso": "ML02", "nota": "Ataques de envenenamiento de datos"},
+        {"paso": "ML03", "nota": "Inversión del modelo"},
+        {"paso": "ML04", "nota": "Inferencia de pertenencia"},
+        {"paso": "ML05", "nota": "Extracción / robo del modelo"},
+        {"paso": "ML10", "nota": "Envenenamiento y puertas traseras"},
+        {"paso": "DL02", "nota": "Evasión de caja blanca"},
+        {"paso": "DL03", "nota": "Evasión de caja negra"},
+        {"paso": "DL04", "nota": "Parches adversarios físicos"},
+        {"paso": "DL05", "nota": "Puertas traseras y envenenamiento"},
+        {"paso": "DL06", "nota": "Extracción del modelo"},
+        {"paso": "DL07", "nota": "Inferencia de pertenencia e inversión"},
+        {"paso": "DL09", "nota": "Evaluación de defensas (preprocesadores, entrenamiento adversario)"},
+        {"paso": "AML.TA0001", "nota": "Preparación de datos adversarios"}
+      ]
+    },
+    {
+      "nombre": "TextAttack",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Framework para ataques adversarios, aumento de datos y entrenamiento adversario en modelos de procesamiento de lenguaje natural (NLP).",
+      "url_referencia": "https://github.com/QData/TextAttack",
+      "repo_github": "QData/TextAttack",
+      "paquete": "pypi:textattack",
+      "documentacion_url": "https://textattack.readthedocs.io/en/master/",
+      "notas_version_url": "https://github.com/QData/TextAttack/releases",
+      "pasos": [
+        {"paso": "ML01", "nota": "Manipulación de la entrada en modelos de texto"},
+        {"paso": "DL03", "nota": "Evasión de caja negra sobre clasificadores de texto"},
+        {"paso": "DL08", "nota": "Robustez ante perturbaciones naturales del texto"}
+      ]
+    },
+    {
+      "nombre": "Giskard",
+      "tipo": "ia",
+      "estado": "activa",
+      "descripcion": "Plataforma open source de testing de modelos de ML y LLM: escaneo automático de vulnerabilidades (alucinaciones, inyección, divulgación de información sensible, sesgos, robustez) y suites de tests reutilizables.",
+      "url_referencia": "https://github.com/Giskard-AI/giskard-oss",
+      "repo_github": "Giskard-AI/giskard-oss",
+      "paquete": "pypi:giskard",
+      "documentacion_url": "https://docs.giskard.ai",
+      "notas_version_url": "https://github.com/Giskard-AI/giskard-oss/releases",
+      "pasos": [
+        {"paso": "LLM01", "nota": "Detección de prompt injection"},
+        {"paso": "LLM02", "nota": "Divulgación de información sensible"},
+        {"paso": "LLM09", "nota": "Alucinaciones y desinformación"},
+        {"paso": "RT08", "nota": "Contenido dañino y estereotipos"},
+        {"paso": "DL08", "nota": "Robustez ante perturbaciones"}
+      ]
+    },
+    {
+      "nombre": "LLM Guard",
+      "tipo": "ia",
+      "estado": "en_observacion",
+      "motivo_estado": "El repositorio protectai/llm-guard está archivado en GitHub",
+      "descripcion": "Conjunto de escáneres de entrada y salida para LLM (prompt injection, PII, toxicidad, secretos). En un pentest sirve para verificar si los controles de este tipo bloquean los ataques.",
+      "url_referencia": "https://github.com/protectai/llm-guard",
+      "repo_github": "protectai/llm-guard",
+      "paquete": "pypi:llm-guard",
+      "documentacion_url": "https://protectai.github.io/llm-guard/",
+      "notas_version_url": "https://github.com/protectai/llm-guard/releases",
+      "pasos": [
+        {"paso": "LLM01", "nota": "Verificar el filtrado de prompt injection"},
+        {"paso": "LLM02", "nota": "Verificar el enmascarado de PII y secretos"},
+        {"paso": "LLM05", "nota": "Verificar el saneamiento de la salida"},
+        {"paso": "RT04", "nota": "Probar la evasión de guardrails"}
+      ]
+    },
+    {
+      "nombre": "Burp Suite",
+      "tipo": "especializada",
+      "estado": "activa",
+      "descripcion": "Plataforma de PortSwigger para pruebas de seguridad de aplicaciones web: proxy de interceptación, escáner, Repeater e Intruder. Edición Community gratuita (incluida en Kali, Parrot y BlackArch) y Professional con licencia comercial.",
+      "url_referencia": "https://portswigger.net/burp",
+      "licencia": "Comercial (Community gratuita)",
+      "documentacion_url": "https://portswigger.net/burp/documentation",
+      "notas_version_url": "https://portswigger.net/burp/releases",
+      "pasos": [
+        {"paso": "A01", "nota": "Pruebas de control de acceso (Repeater, Autorize)"},
+        {"paso": "A03", "nota": "Inyección (Scanner, Intruder)"},
+        {"paso": "A05", "nota": "Configuración insegura"},
+        {"paso": "A07", "nota": "Autenticación y manejo de sesión"},
+        {"paso": "A10", "nota": "SSRF (Collaborator)"},
+        {"paso": "LLM05", "nota": "Probar cómo la aplicación web usa la salida del LLM"}
+      ]
+    },
+    {
+      "nombre": "sqlmap",
+      "tipo": "especializada",
+      "estado": "activa",
+      "descripcion": "Herramienta open source que automatiza la detección y explotación de inyecciones SQL y la toma de control de servidores de base de datos.",
+      "url_referencia": "https://sqlmap.org",
+      "repo_github": "sqlmapproject/sqlmap",
+      "paquete": "pypi:sqlmap",
+      "licencia": "GPL-2.0",
+      "documentacion_url": "https://github.com/sqlmapproject/sqlmap/wiki",
+      "notas_version_url": "https://github.com/sqlmapproject/sqlmap/releases",
+      "pasos": [
+        {"paso": "A03", "nota": "Inyección SQL"}
+      ]
+    },
+    {
+      "nombre": "OWASP ZAP",
+      "tipo": "especializada",
+      "estado": "activa",
+      "descripcion": "Zed Attack Proxy: escáner de seguridad web open source con proxy de interceptación, escaneo pasivo y activo, spider y automatización por API.",
+      "url_referencia": "https://www.zaproxy.org",
+      "repo_github": "zaproxy/zaproxy",
+      "documentacion_url": "https://www.zaproxy.org/docs/",
+      "notas_version_url": "https://www.zaproxy.org/download/",
+      "pasos": [
+        {"paso": "A01", "nota": "Control de acceso"},
+        {"paso": "A03", "nota": "Inyección (escaneo activo)"},
+        {"paso": "A05", "nota": "Configuración insegura (escaneo pasivo)"},
+        {"paso": "A06", "nota": "Componentes desactualizados"},
+        {"paso": "A07", "nota": "Autenticación"},
+        {"paso": "A10", "nota": "SSRF"}
+      ]
+    },
+    {
+      "nombre": "nuclei",
+      "tipo": "especializada",
+      "estado": "activa",
+      "descripcion": "Escáner de vulnerabilidades de ProjectDiscovery basado en plantillas YAML mantenidas por la comunidad (CVE, configuraciones inseguras, exposiciones), rápido y fácil de automatizar.",
+      "url_referencia": "https://github.com/projectdiscovery/nuclei",
+      "repo_github": "projectdiscovery/nuclei",
+      "documentacion_url": "https://docs.projectdiscovery.io/tools/nuclei/overview",
+      "notas_version_url": "https://github.com/projectdiscovery/nuclei/releases",
+      "pasos": [
+        {"paso": "A05", "nota": "Configuraciones inseguras y exposiciones"},
+        {"paso": "A06", "nota": "CVE en componentes conocidos"}
+      ]
+    }
+  ],
+  "distribuciones": [
+    {
+      "codigo": "kali",
+      "nombre": "Kali Linux",
+      "descripcion": "Distribución basada en Debian, mantenida por OffSec, orientada a pentesting y auditoría de seguridad. Es la referencia del mercado: más de 600 herramientas organizadas en metapaquetes por categoría (kali-tools-web, kali-tools-vulnerability, etc.) y un top 10 curado.",
+      "sitio_url": "https://www.kali.org",
+      "documentacion_url": "https://www.kali.org/docs/"
+    },
+    {
+      "codigo": "parrot",
+      "nombre": "Parrot Security",
+      "descripcion": "Distribución basada en Debian enfocada en seguridad, privacidad y desarrollo. Incluye herramientas de pentesting organizadas en metapaquetes (parrot-tools-web, parrot-tools-vuln, parrot-tools-ai...) y es más liviana que Kali.",
+      "sitio_url": "https://parrotsec.org",
+      "documentacion_url": "https://parrotsec.org/docs/"
+    },
+    {
+      "codigo": "blackarch",
+      "nombre": "BlackArch",
+      "descripcion": "Distribución basada en Arch Linux (o repositorio sobre una instalación de Arch) con el catálogo más grande: unas 2.800 herramientas en grupos por categoría, incluido blackarch-ai con herramientas de seguridad de IA (garak, promptfoo, ART, CleverHans).",
+      "sitio_url": "https://blackarch.org",
+      "documentacion_url": "https://blackarch.org/guide.html"
+    }
+  ]
+}

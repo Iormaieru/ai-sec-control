@@ -1,6 +1,13 @@
-# Worker — sincronización con Jira
+# Worker — sincronización con Jira y revisión de herramientas
 
-Servicio aparte del backend. No expone HTTP. Es dueño de la sincronización periódica con Jira (proyecto MDA, tablero IA-SEC).
+Servicio aparte del backend. No expone HTTP. Tiene dos tareas:
+
+1. **Sincronización con Jira** (proyecto MDA, tablero IA-SEC).
+2. **Revisión de herramientas de pentesting** cada 15 días, en un hilo aparte (ver más abajo).
+
+Si Jira está deshabilitado, el worker sigue corriendo sólo con la segunda tarea.
+
+## Sincronización con Jira
 
 | Sentido | Cómo |
 |---|---|
@@ -15,6 +22,24 @@ Errores:
 
 En el backend quedan sólo las acciones que el usuario hace en vivo: transiciones, asignación y el webhook opcional.
 
+## Revisión de herramientas (Catálogo, Radar, Distribuciones)
+
+Especificación en `tasks/herramientas-radar.md`. Cada `AISEC_HERRAMIENTAS_REVISION_DIAS` (15 por defecto), o cuando un admin pulsa "Revisar ahora" en la plataforma:
+
+1. **Distribuciones:** lee los índices de paquetes de Kali, Parrot y BlackArch y actualiza sus fichas (versión, categorías, cantidad de herramientas).
+2. **Catálogo:** actualiza cada herramienta con GitHub (actividad, estrellas, archivada, mudanzas), PyPI/npm (versión) y las distribuciones. Recalcula sus criterios; las que dejan de estar mantenidas pasan a **en observación**.
+3. **Radar:** descubre herramientas de seguridad de IA por temas de GitHub y por el grupo `blackarch-ai`. Las que cumplen los criterios y no fueron descartadas entran como candidatas, hasta 25 por revisión. Para cada una, el proveedor LLM sugiere los pasos de los estándares donde sirve, y un analista los confirma al aprobarla.
+
+Si una fuente falla, se anota el error y la revisión sigue con el resto. Una revisión real tarda ~1,5 minutos.
+
+Necesita, además de las variables de Jira:
+
+| Variable | Para qué |
+|---|---|
+| `AISEC_GITHUB_TOKEN` | Token **fine-grained** de sólo lectura de repos públicos, sin permisos extra. Sin token, GitHub limita a 60 consultas por hora |
+| `AISEC_LLM_PROVIDER`, `AISEC_OPENAI_API_KEY` | Sugerencia de vínculos. Sin LLM, las candidatas entran sin pasos sugeridos |
+| `AISEC_HERRAMIENTAS_REVISION_DIAS` | Opcional; 15 por defecto |
+
 ## Código
 
 Reutiliza los modelos y la lógica de dominio del backend (`backend/app`), que la imagen copia como librería. Por eso **se construye desde la raíz del repo**:
@@ -25,6 +50,11 @@ aisec_worker/
   push.py       eventos de jira_outbox -> Jira
   pull.py       tickets del tablero -> casos
   discover.py   relevamiento de la configuración de Jira (sólo lectura)
+  herramientas/
+    fuentes.py     GitHub, PyPI/npm e índices de Kali, Parrot y BlackArch
+    evaluacion.py  criterios ("mantenida", "adoptada", ...) y cambios de estado
+    vinculos.py    pasos sugeridos por el LLM
+    revision.py    orquesta la revisión y la registra en revision_herramientas
 ```
 
 ## Correr en local
@@ -36,6 +66,7 @@ cd backend
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker            # worker
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker --una-vez  # una vuelta y sale
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker.discover   # ver tablero, columnas y campos
+PYTHONPATH=../worker .venv/bin/python -m aisec_worker --herramientas  # una revisión de herramientas ya
 ```
 
 Con Docker: `docker compose --profile jira up worker`. No arranca con un `up` común porque opera sobre el **Jira real**.
@@ -64,6 +95,8 @@ Servicio nuevo desde el mismo repo:
   | `AISEC_JIRA_EMAIL` | |
   | `AISEC_JIRA_API_TOKEN` | |
   | `AISEC_JIRA_SYNC_INTERVALO_SEGUNDOS` | Opcional; 120 por defecto, mínimo 30 |
+  | `AISEC_GITHUB_TOKEN` | Revisión de herramientas (ver arriba) |
+  | `AISEC_LLM_PROVIDER`, `AISEC_OPENAI_API_KEY` | Vínculos sugeridos en el Radar |
 
 Las migraciones las corre el backend (*Pre-deploy Command*: `alembic upgrade head`). Si el worker arranca antes de que terminen, la primera vuelta falla y la siguiente ya funciona.
 

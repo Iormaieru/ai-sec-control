@@ -107,6 +107,12 @@ class Settings(BaseSettings):
     # cambios de la plataforma no esperan este intervalo: llegan por NOTIFY.
     jira_sync_intervalo_segundos: int = 120
 
+    # Herramientas de pentesting (worker/aisec_worker/herramientas): revisión
+    # del Catálogo y descubrimiento para el Radar. Token de GitHub de sólo
+    # lectura pública (sin él, GitHub limita a 60 consultas por hora).
+    github_token: str | None = None
+    herramientas_revision_dias: int = 15
+
 
 @lru_cache
 def get_settings() -> Settings:
