@@ -23,19 +23,13 @@ services:
       - path: ./backend/.env
         required: false
     environment:
-      # Pisa lo que traiga backend/.env para estas claves específicas: en
-      # Docker la DB se llama "db" (red interna), no localhost:5433.
       AISEC_DATABASE_URL: postgresql+psycopg://aisec:aisec@db:5432/aisec
-      AISEC_JWT_SECRET: dev-secret-change-me
-      AISEC_ENVIRONMENT: development
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
 
-  # Sincronización con Jira. Opera sobre el Jira REAL: no arranca con un
-  # `docker compose up` común, sólo con `docker compose --profile jira up`.
   # Requiere AISEC_JIRA_ENABLED=true y las credenciales en backend/.env.
   worker:
     profiles: ["jira"]
