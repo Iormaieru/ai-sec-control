@@ -450,3 +450,157 @@ export interface EnvioResultado {
   aplicadas: number;
   omitidas: number;
 }
+
+// ---------- Alertas (Netskope) ----------
+
+export type SeveridadAlerta = "baja" | "media" | "alta" | "critica";
+export type EstadoAlerta = "nueva" | "en_revision" | "resuelta" | "descartada";
+
+export interface ReglaAlerta {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  /** Consulta con la sintaxis de Skope IT, ej. `app like mcp`. */
+  consulta: string;
+  severidad: SeveridadAlerta;
+  activa: boolean;
+  notificar_email: boolean;
+  /** alerta: genera alertas y emails; metrica: sólo totales para el tablero. */
+  modo: "alerta" | "metrica";
+  /** netskope: consulta de Skope IT; tenable: tipo predefinido sobre el inventario. */
+  fuente: "netskope" | "tenable";
+  consultada_hasta: string | null;
+  ultimo_error: string | null;
+  alertas_abiertas: number;
+}
+
+export interface Alerta {
+  id: string;
+  regla_id: string;
+  regla_nombre: string;
+  regla_fuente: "netskope" | "tenable";
+  /** Sólo reglas de Tenable. */
+  regla_tipo: "servicio_ia_expuesto" | "fuera_de_cobertura" | null;
+  app: string;
+  /** Usuario de Netskope o, en las reglas de Tenable, el equipo. */
+  usuario: string;
+  estado: EstadoAlerta;
+  severidad: SeveridadAlerta;
+  primera_vez: string;
+  ultima_vez: string;
+  cantidad_eventos: number;
+  actividades: Record<string, number>;
+  caso_id: string | null;
+  caso_nombre: string | null;
+  caso_jira_key: string | null;
+  nota: string | null;
+  notificada_at: string | null;
+  /** Equipos (hostname) desde donde se vio la actividad. */
+  equipos: string[];
+  atendida_at: string | null;
+  cerrada_at: string | null;
+  updated_at: string;
+}
+
+export interface EquipoContexto {
+  equipo: string;
+  en_tenable: boolean;
+  con_inventario: boolean;
+  tiene_agente: boolean;
+  sistema_operativo: string | null;
+  software_ia: string[];
+  puertos_ia: { puerto: number; servicio: string }[];
+  visto_at: string | null;
+}
+
+export interface EventoAlerta {
+  evento_id: string;
+  fecha: string;
+  actividad: string | null;
+  sitio: string | null;
+  objeto: string | null;
+  datos: Record<string, unknown>;
+}
+
+export interface AlertaOrigen {
+  id: string;
+  regla_nombre: string;
+  app: string;
+  usuario: string;
+  estado: EstadoAlerta;
+  severidad: SeveridadAlerta;
+  ultima_vez: string;
+}
+
+export interface AlertaDetalle extends Alerta {
+  eventos: EventoAlerta[];
+  contexto_equipos: EquipoContexto[];
+  /** "Equipo fuera de Tenable": las alertas de Netskope con actividad en ese equipo. */
+  alertas_origen: AlertaOrigen[];
+  /** Sólo Netskope: quién, desde dónde, qué hizo, contra qué y qué dice Netskope. */
+  analisis: AspectoAnalisis[];
+}
+
+export interface AspectoAnalisis {
+  aspecto: string;
+  texto: string;
+  nivel: "alto" | "medio" | "bajo" | "info";
+}
+
+export interface PruebaRegla {
+  desde: string;
+  hasta: string;
+  cantidad: number;
+  por_app: Record<string, number>;
+  usuarios: number;
+  muestra: EventoAlerta[];
+}
+
+// --- Tablero "Seguridad de IA" ---
+
+export type PoblacionIA = "internos" | "externos";
+
+export interface IndicadoresIA {
+  alertas_abiertas: number;
+  criticas_altas_abiertas: number;
+  usuarios_con_actividad: number;
+  apps_detectadas: number;
+  externos_con_actividad: number;
+  eventos: number;
+  equipos_con_actividad: number;
+  equipos_fuera_de_tenable: number;
+  horas_medias_atencion: number | null;
+  horas_medias_cierre: number | null;
+}
+
+export type DiaPorSeveridad = { dia: string } & Record<SeveridadAlerta, number>;
+
+export interface TableroIA {
+  desde: string;
+  hasta: string;
+  indicadores: IndicadoresIA;
+  eventos_por_dia: DiaPorSeveridad[];
+  alertas_nuevas_por_dia: { dia: string; cantidad: number }[];
+  top_apps: { nombre: string; usuarios: number; eventos: number }[];
+  top_usuarios: { nombre: string; eventos: number; reglas: number }[];
+  poblacion: { poblacion: PoblacionIA; usuarios: number; eventos: number }[];
+  alertas_por_estado: Record<EstadoAlerta, number>;
+  actividades_sensibles: { dia: string; actividades: Record<string, number> }[];
+  cobertura_tenable: { con_agente: number; por_escaneo: number; sin_inventario: number; fuera_de_tenable: number };
+  software_tenable: { nombre: string; cantidad: number }[];
+  tenable_actualizado_at: string | null;
+}
+
+export interface DestinatarioAlerta {
+  id: string;
+  email: string;
+  nombre: string | null;
+  activo: boolean;
+}
+
+export interface DestinatariosAlerta {
+  destinatarios: DestinatarioAlerta[];
+  /** De dónde salen hoy las casillas: las cargadas en la plataforma o, si no hay, la variable de entorno. */
+  origen: "plataforma" | "variable" | "ninguno";
+  en_uso: string[];
+}

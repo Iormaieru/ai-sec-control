@@ -9,3 +9,4 @@ from app.documents import models as documents_models  # noqa: F401
 from app.pentesting import models as pentesting_models  # noqa: F401
 from app.threat_model import models as threat_model_models  # noqa: F401
 from app.integraciones.jira import models as jira_models  # noqa: F401
+from app.alertas import models as alertas_models  # noqa: F401

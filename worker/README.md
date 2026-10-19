@@ -1,9 +1,11 @@
-# Worker — sincronización con Jira y revisión de herramientas
+# Worker — Jira, herramientas y alertas
 
-Servicio aparte del backend. No expone HTTP. Tiene dos tareas:
+Servicio aparte del backend. No expone HTTP. Tiene cuatro tareas, cada una en su propio hilo:
 
 1. **Sincronización con Jira** (proyecto MDA, tablero IA-SEC).
-2. **Revisión de herramientas de pentesting** cada 15 días, en un hilo aparte (ver más abajo).
+2. **Revisión de herramientas de pentesting** cada 15 días.
+3. **Alertas de Netskope** cada 5 minutos, si `AISEC_NETSKOPE_ENABLED=true`.
+4. **Inventario de Tenable** una vez por día, si `AISEC_TENABLE_ENABLED=true`.
 
 Si Jira está deshabilitado, el worker sigue corriendo sólo con la segunda tarea.
 
@@ -40,6 +42,47 @@ Necesita, además de las variables de Jira:
 | `AISEC_LLM_PROVIDER`, `AISEC_OPENAI_API_KEY` | Sugerencia de vínculos. Sin LLM, las candidatas entran sin pasos sugeridos |
 | `AISEC_HERRAMIENTAS_REVISION_DIAS` | Opcional; 15 por defecto |
 
+## Alertas de Netskope (sector Alertas)
+
+Cada `AISEC_NETSKOPE_INTERVALO_SEGUNDOS` (300), para cada regla activa (una consulta de Skope IT, ej. `app like mcp`):
+
+1. **Consulta:** `GET {tenant}/api/v2/events/data/application` con la consulta y la ventana `[consultada_hasta − 30 min, ahora − AISEC_NETSKOPE_DEMORA_MINUTOS]`. La demora cubre la ingesta de Netskope. En la primera consulta de una regla se mira hacia atrás `AISEC_NETSKOPE_RETROSPECTIVA_DIAS` (7).
+2. **Agrupación:** los eventos se agrupan en una alerta por **regla + app + usuario**. Los eventos repetidos no cuentan dos veces.
+3. **Estados:**
+   - Una alerta **resuelta** que recibe eventos nuevos vuelve a "nueva".
+   - Una **descartada** (falso positivo) sólo acumula eventos, sin volver a avisar.
+4. **Email:** al final de cada vuelta se manda **un solo email resumen** con las alertas nuevas a los destinatarios cargados en la plataforma (Alertas → Avisos por email). Si no hay ninguno cargado, va a `AISEC_ALERTAS_EMAIL_DESTINO`. Si el envío falla, se reintenta en la próxima vuelta.
+
+Si una regla falla (token, 429, red), su cursor no avanza y el error se ve en la pestaña Reglas. Los logs sólo llevan cantidades, nunca usuarios.
+
+| Variable | Para qué |
+|---|---|
+| `AISEC_NETSKOPE_ENABLED` | `true` para activar el hilo de alertas |
+| `AISEC_NETSKOPE_TENANT_URL` | `https://bancomacro.goskope.com` |
+| `AISEC_NETSKOPE_API_TOKEN` | Token de la API v2, de sólo lectura sobre eventos de aplicación |
+| `AISEC_ALERTAS_EMAIL_DESTINO` | Respaldo: casillas separadas por coma, que se usan sólo si no hay destinatarios cargados en la plataforma. El envío real requiere `AISEC_EMAIL_BACKEND=smtp` |
+
+El backend también necesita `AISEC_NETSKOPE_*`, para el botón "Probar" de las reglas.
+
+## Inventario de Tenable
+
+Cada `AISEC_TENABLE_INTERVALO_HORAS` (24) el worker exporta de Tenable Vulnerability Management (`POST /vulns/export`, sólo lectura) el inventario de software (plugins 20811 y 22869) y los puertos abiertos. Reemplaza la tabla `equipos_tenable` con lo relevante para IA: Ollama, LM Studio, Python, Anaconda, Jupyter, y los puertos 11434, 1234, 8888 y 7860. La exportación de ~12 mil equipos tarda unos 3 minutos.
+
+Después evalúa las reglas de fuente Tenable:
+- **servicio de IA expuesto:** un puerto de servicio de IA abierto;
+- **equipo con actividad de IA fuera de Tenable:** el equipo aparece en alertas abiertas de Netskope y Tenable no lo inventaría, ni por hostname ni por NetBIOS.
+
+Para una actualización manual (por ejemplo, desde Control-M): `python -m aisec_worker --tenable`.
+
+| Variable | Para qué |
+|---|---|
+| `AISEC_TENABLE_ENABLED` | `true` para activar el hilo de Tenable |
+| `AISEC_TENABLE_BASE_URL` | `https://cloud.tenable.com` |
+| `AISEC_TENABLE_ACCESS_KEY` / `AISEC_TENABLE_SECRET_KEY` | Claves de API con alcance sobre `/vulns/export` |
+| `AISEC_TENABLE_INTERVALO_HORAS` | Horas entre actualizaciones (24) |
+
+El backend no llama a Tenable: el tablero "Seguridad de IA" lee lo que dejó el worker.
+
 ## Código
 
 Reutiliza los modelos y la lógica de dominio del backend (`backend/app`), que la imagen copia como librería. Por eso **se construye desde la raíz del repo**:
@@ -55,7 +98,12 @@ aisec_worker/
     evaluacion.py  criterios ("mantenida", "adoptada", ...) y cambios de estado
     vinculos.py    pasos sugeridos por el LLM
     revision.py    orquesta la revisión y la registra en revision_herramientas
+  alertas/
+    procesamiento.py  reglas -> eventos de Netskope -> alertas (agrupación, reincidencia)
+    aviso.py          email resumen de las alertas nuevas
 ```
+
+El cliente de Netskope está en `backend/app/alertas/netskope.py`, porque lo comparten el worker y el botón "Probar" del backend.
 
 ## Correr en local
 
@@ -67,6 +115,7 @@ PYTHONPATH=../worker .venv/bin/python -m aisec_worker            # worker
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker --una-vez  # una vuelta y sale
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker.discover   # ver tablero, columnas y campos
 PYTHONPATH=../worker .venv/bin/python -m aisec_worker --herramientas  # una revisión de herramientas ya
+PYTHONPATH=../worker .venv/bin/python -m aisec_worker --alertas       # una vuelta de alertas de Netskope
 ```
 
 Con Docker: `docker compose --profile jira up worker`. No arranca con un `up` común porque opera sobre el **Jira real**.

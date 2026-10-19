@@ -113,6 +113,31 @@ class Settings(BaseSettings):
     github_token: str | None = None
     herramientas_revision_dias: int = 15
 
+    # Alertas desde Netskope (app/alertas + worker/aisec_worker/alertas): el
+    # worker consulta la API v2 con las reglas activas cada intervalo. La
+    # demora cubre la ingesta de Netskope (los eventos tardan en aparecer).
+    netskope_enabled: bool = False
+    netskope_tenant_url: str = "https://bancomacro.goskope.com"
+    netskope_api_token: str | None = None
+    netskope_intervalo_segundos: int = 300
+    netskope_demora_minutos: int = 10
+    netskope_retrospectiva_dias: int = 7  # primera consulta de una regla nueva
+    # Tenable Vulnerability Management (cloud): inventario por equipo para
+    # correlacionar con Netskope. El worker lo actualiza cada N horas (la
+    # exportación de ~11 mil equipos tarda varios minutos).
+    tenable_enabled: bool = False
+    tenable_base_url: str = "https://cloud.tenable.com"
+    tenable_access_key: str | None = None
+    tenable_secret_key: str | None = None
+    tenable_intervalo_horas: int = 24
+
+    # Coma-separado: casillas que reciben el resumen de alertas nuevas.
+    alertas_email_destino: str | None = None
+
+    @property
+    def alertas_email_destino_list(self) -> list[str]:
+        return [e.strip() for e in (self.alertas_email_destino or "").split(",") if e.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:

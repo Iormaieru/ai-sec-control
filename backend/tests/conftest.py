@@ -25,6 +25,21 @@ if make_url(_test_url).host not in LOCAL_HOSTS:
     )
 os.environ["AISEC_DATABASE_URL"] = _test_url
 
+# Los tests nunca hablan con servicios reales, aunque backend/.env tenga las
+# integraciones habilitadas para desarrollo: las variables de entorno pisan al
+# .env. Cada test que necesita una integración usa su versión simulada.
+os.environ.update(
+    {
+        "AISEC_JIRA_ENABLED": "false",
+        "AISEC_NETSKOPE_ENABLED": "false",
+        "AISEC_TENABLE_ENABLED": "false",
+        "AISEC_LLM_PROVIDER": "mock",
+        "AISEC_EMAIL_BACKEND": "console",
+        "AISEC_GITHUB_TOKEN": "",
+        "AISEC_ALERTAS_EMAIL_DESTINO": "",
+    }
+)
+
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
@@ -66,3 +81,6 @@ def _test_database_ready() -> None:
 
     with engine.begin() as conn:
         conn.execute(text("TRUNCATE TABLE herramientas_pentest, herramienta_pasos, distribuciones CASCADE"))
+        # Las reglas de seguridad de IA sembradas (migración 535661720f82) también:
+        # los tests arrancan sólo con la de MCP, y cada test crea las que necesita.
+        conn.execute(text("DELETE FROM reglas_alerta WHERE nombre <> 'Uso de servidores MCP'"))

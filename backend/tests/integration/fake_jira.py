@@ -59,12 +59,7 @@ BOARD_CONFIG = {
 }
 
 
-_INICIO = dt.datetime.now(dt.UTC)
-
-
-def _fecha(minutos: int = 0) -> str:
-    # Cada operación del Jira falso avanza un minuto desde que arrancan los tests.
-    momento = _INICIO + dt.timedelta(minutes=minutos)
+def _fecha(momento: dt.datetime) -> str:
     return momento.strftime("%Y-%m-%dT%H:%M:%S.000+0000")
 
 
@@ -83,6 +78,10 @@ class FakeJira:
         self.llamadas: list[str] = []
         self._ids = itertools.count(1000)
         self._reloj = itertools.count(1)
+        # Reloj propio de cada instancia, anclado a la hora real al crearla: si
+        # se anclara al importar el módulo, en una corrida larga quedaría atrás
+        # de los timestamps que pone la base y el orden de los comentarios fallaría.
+        self._inicio = dt.datetime.now(dt.UTC)
 
     def __enter__(self) -> "FakeJira":
         return self
@@ -91,7 +90,8 @@ class FakeJira:
         pass
 
     def _tick(self) -> str:
-        return _fecha(next(self._reloj))
+        """Cada operación del Jira falso avanza un minuto."""
+        return _fecha(self._inicio + dt.timedelta(minutes=next(self._reloj)))
 
     def _check(self, llamada: str) -> None:
         self.llamadas.append(llamada)

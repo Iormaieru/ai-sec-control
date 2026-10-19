@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.alertas.router import router as alertas_router
+from app.alertas.tablero_router import router as tablero_ia_router
 from app.auth.router import router as auth_router
 from app.casos.router import router as casos_router
 from app.catalog.router import router as catalog_router
@@ -51,11 +53,13 @@ def create_app() -> FastAPI:
     app.include_router(pentesting_pasos_router)
     app.include_router(pentesting_estandares_router)
     app.include_router(pentesting_pentests_router)
+    app.include_router(tablero_ia_router)  # antes que /metricas
     app.include_router(metricas_router)
     app.include_router(threat_model_score_router)
     app.include_router(cuestionarios_router)
     app.include_router(cuestionarios_public_router)
     app.include_router(jira_router)
+    app.include_router(alertas_router)
 
     return app
 

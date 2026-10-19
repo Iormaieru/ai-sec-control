@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { getResumenAlertas } from "../api/alertas";
 import logo from "../assets/logo-aisec.jpeg";
 import { useAuth } from "../auth/AuthContext";
 
@@ -8,6 +9,8 @@ interface NavLeaf {
   label: string;
   icon: string;
   disabled?: boolean;
+  /** Muestra al lado la cantidad de pendientes de ese sector. */
+  contador?: "alertas";
 }
 
 interface NavGroup {
@@ -32,14 +35,38 @@ const NAV_ITEMS: NavItem[] = [
       { to: "/pentesting/herramientas", label: "Herramientas", icon: "bi-tools" },
     ],
   },
-  { to: "/dashboards", label: "Dashboards", icon: "bi-graph-up" },
+  { to: "/alertas", label: "Alertas", icon: "bi-bell", contador: "alertas" },
+  {
+    base: "/dashboards",
+    label: "Dashboards",
+    icon: "bi-graph-up",
+    children: [
+      { to: "/dashboards/general", label: "General", icon: "bi-speedometer2" },
+      { to: "/dashboards/seguridad-ia", label: "Seguridad de IA", icon: "bi-shield-lock" },
+    ],
+  },
 ];
+
+/** Alertas nuevas, para el contador del menú (se actualiza cada minuto). */
+function useAlertasNuevas(): number {
+  const [nuevas, setNuevas] = useState(0);
+  useEffect(() => {
+    const actualizar = () =>
+      getResumenAlertas()
+        .then((r) => setNuevas(r.nuevas))
+        .catch(() => undefined);
+    actualizar();
+    const timer = setInterval(actualizar, 60000);
+    return () => clearInterval(timer);
+  }, []);
+  return nuevas;
+}
 
 function isGroup(item: NavItem): item is NavGroup {
   return "children" in item;
 }
 
-function SidebarLink({ item, sub }: { item: NavLeaf; sub?: boolean }) {
+function SidebarLink({ item, sub, contador }: { item: NavLeaf; sub?: boolean; contador?: number }) {
   const className = `sidebar-link${sub ? " sidebar-sublink" : ""}`;
   if (item.disabled) {
     return (
@@ -52,7 +79,12 @@ function SidebarLink({ item, sub }: { item: NavLeaf; sub?: boolean }) {
   return (
     <NavLink to={item.to} className={({ isActive }) => `${className}${isActive ? " active" : ""}`}>
       <i className={`bi ${item.icon}`} />
-      {item.label}
+      <span className="flex-grow-1">{item.label}</span>
+      {!!contador && (
+        <span className="badge rounded-pill text-bg-danger" title={`${contador} nueva(s)`}>
+          {contador}
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -92,6 +124,7 @@ function SidebarGroup({ group }: { group: NavGroup }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const alertasNuevas = useAlertasNuevas();
 
   return (
     <div className="app-shell">
@@ -110,7 +143,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             isGroup(item) ? (
               <SidebarGroup key={item.base} group={item} />
             ) : (
-              <SidebarLink key={item.to} item={item} />
+              <SidebarLink
+                key={item.to}
+                item={item}
+                contador={item.contador === "alertas" ? alertasNuevas : undefined}
+              />
             ),
           )}
         </nav>

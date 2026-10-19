@@ -674,3 +674,91 @@ body {
 .selector-asignado-lista .list-group-item.active .asignado-nombre {
   color: #fff;
 }
+
+/* ---------- Tablero "Seguridad de IA" (gráficos) ---------- */
+
+.viz-hero {
+  font-family: var(--font-titulos);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #0b0b0b;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-recargando {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.viz-tooltip {
+  background: #ffffff;
+  border: 1px solid #e3e6ea;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 8px 10px;
+  font-size: 12px;
+  min-width: 140px;
+}
+
+.viz-tooltip-titulo {
+  color: #52514e;
+  margin-bottom: 4px;
+}
+
+.viz-tooltip-fila {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.viz-tooltip-fila strong {
+  color: #0b0b0b;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-tooltip-fila span:last-child {
+  color: #52514e;
+}
+
+/* Llave de serie: un trazo corto, no una caja. */
+.viz-tooltip-key {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.viz-tabla {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.viz-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: #52514e;
+  padding-top: 4px;
+}
+
+.viz-leyenda > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viz-leyenda-caja {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.viz-leyenda-linea {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}

@@ -23,6 +23,7 @@ import {
   TIPO_LABELS,
   tipoLabel,
 } from "../casos/labels";
+import { AlertasDelCaso } from "../alertas/AlertasDelCaso";
 import { Asignado } from "../casos/Asignado";
 import { SelectorAsignado } from "../casos/SelectorAsignado";
 import { CasoPentestsSection } from "../pentesting/CasoPentestsSection";
@@ -78,6 +79,8 @@ export function CasoDetailPage() {
       <EstadoSection caso={caso} onChanged={setCaso} />
 
       <ComentariosSection caso={caso} />
+
+      <AlertasDelCaso casoId={caso.id} />
 
       <ContactosSection caso={caso} onChanged={reload} />
 

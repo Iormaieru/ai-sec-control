@@ -9,13 +9,21 @@
   AISEC_HERRAMIENTAS_REVISION_DIAS revisa el Catálogo, las distribuciones y
   descubre candidatas para el Radar; también cuando se pide "revisar ahora".
   Con Jira deshabilitado, el worker sigue corriendo sólo con esta tarea.
+- Alertas de Netskope (otro hilo, si AISEC_NETSKOPE_ENABLED): cada
+  AISEC_NETSKOPE_INTERVALO_SEGUNDOS ejecuta las reglas activas, agrupa los
+  eventos en alertas y manda un email resumen con las nuevas.
+- Inventario de Tenable (otro hilo, si AISEC_TENABLE_ENABLED): cada
+  AISEC_TENABLE_INTERVALO_HORAS actualiza los equipos (software y puertos de
+  IA) y evalúa las reglas de fuente Tenable. La brecha de cobertura también se
+  reevalúa en cada vuelta de alertas.
 
 Un error en una vuelta (Jira caído, timeout, base reiniciando) se loguea y
 se reintenta en la siguiente. El proceso termina con SIGTERM (redeploy) o
 Ctrl+C después de completar la vuelta en curso.
 
-Opciones: --una-vez (una vuelta de Jira y sale) y --herramientas (una
-revisión de herramientas completa ya, y sale). Para pruebas.
+Opciones (una vuelta y sale; para pruebas o un planificador como Control-M):
+--una-vez (Jira), --herramientas (revisión de herramientas), --alertas (Netskope),
+--tenable (inventario de Tenable).
 """
 
 import argparse
@@ -31,6 +39,10 @@ import psycopg
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
+from app.alertas.netskope import NetskopeError
+from app.alertas.tenable import TenableError
+from app.alertas.tenable import crear_cliente as crear_cliente_tenable
+from app.alertas.netskope import crear_cliente as crear_cliente_netskope
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal, engine
@@ -40,6 +52,9 @@ from app.llm.base import LLMProvider
 from app.llm.factory import get_llm_provider
 from app.pentesting.models import RevisionHerramientas
 
+from aisec_worker.alertas.aviso import notificar
+from aisec_worker.alertas.procesamiento import procesar
+from aisec_worker.alertas.tenable_inventario import debe_sincronizar, evaluar_reglas, sincronizar
 from aisec_worker.herramientas.fuentes import Distribuciones, GitHub, Registros
 from aisec_worker.herramientas.revision import Fuentes, debe_revisar, revisar
 from aisec_worker.pull import pull
@@ -50,6 +65,9 @@ logger = logging.getLogger("aisec_worker")
 # pg advisory locks: una sola vuelta de cada tarea a la vez (durante un redeploy conviven dos workers).
 _LOCK = 7_241_001
 _LOCK_HERRAMIENTAS = 7_241_002
+_LOCK_ALERTAS = 7_241_003
+_LOCK_TENABLE = 7_241_004
+_CHEQUEO_TENABLE = 3600  # cada cuánto se fija si toca actualizar el inventario
 _CHEQUEO_HERRAMIENTAS = 300  # cada cuánto se fija si toca revisar herramientas (o si lo pidieron)
 _INTERVALO_MINIMO = 30
 _ESPERA_MAXIMA = 5  # cada cuánto se revisa si llegó la señal de apagado
@@ -191,12 +209,110 @@ def _tarea_herramientas() -> None:
         _detener.wait(_CHEQUEO_HERRAMIENTAS)
 
 
+# --- alertas de Netskope ---
+
+
+def vuelta_alertas() -> None:
+    """Ejecuta las reglas activas contra Netskope y avisa las alertas nuevas."""
+    settings = get_settings()
+    with _lock(_LOCK_ALERTAS) as obtenido:
+        if not obtenido:
+            logger.info("Otra instancia está procesando alertas; se omite esta vuelta")
+            return
+        db = SessionLocal()
+        try:
+            with crear_cliente_netskope() as client:
+                resultado = procesar(db, client, settings)
+            # Barato (sólo base): una alerta nueva en un equipo sin inventario de
+            # Tenable genera la de brecha de cobertura en esta misma vuelta.
+            tenable = evaluar_reglas(db)
+            avisadas = notificar(db, settings)
+        finally:
+            db.close()
+    # Sólo cantidades: los eventos traen usuarios (datos personales).
+    logger.info(
+        "Alertas de Netskope",
+        extra={
+            "eventos": resultado.eventos,
+            "nuevas": resultado.nuevas,
+            "reincidentes": resultado.reincidentes,
+            "actualizadas": resultado.actualizadas,
+            "eventos_en_metricas": resultado.eventos_metricas,
+            "nuevas_tenable": tenable.nuevas,
+            "avisadas_por_email": avisadas,
+            "errores": len(resultado.errores),
+        },
+    )
+    for error in resultado.errores:
+        logger.warning("Error en las alertas de Netskope", extra={"detalle": error})
+
+
+def _tarea_alertas(intervalo: int) -> None:
+    while not _detener.is_set():
+        try:
+            vuelta_alertas()
+        except Exception:
+            logger.exception("Falló la vuelta de alertas; se reintenta en la próxima")
+        _detener.wait(intervalo)
+
+
+# --- inventario de Tenable ---
+
+
+def vuelta_tenable(*, forzar: bool = False) -> None:
+    settings = get_settings()
+    with _lock(_LOCK_TENABLE) as obtenido:
+        if not obtenido:
+            return
+        db = SessionLocal()
+        try:
+            if not (forzar or debe_sincronizar(db, settings.tenable_intervalo_horas)):
+                return
+            logger.info("Inventario de Tenable: actualización iniciada")
+            with crear_cliente_tenable() as client:
+                inventario = sincronizar(db, client)
+            reglas = evaluar_reglas(db)
+            avisadas = notificar(db, settings)
+        finally:
+            db.close()
+    logger.info(
+        "Inventario de Tenable",
+        extra={
+            "equipos": inventario.equipos,
+            "con_inventario": inventario.con_inventario,
+            "con_software_ia": inventario.con_software_ia,
+            "con_puertos_ia": inventario.con_puertos_ia,
+            "alertas_nuevas": reglas.nuevas,
+            "avisadas_por_email": avisadas,
+        },
+    )
+
+
+def _tarea_tenable() -> None:
+    while not _detener.is_set():
+        try:
+            vuelta_tenable()
+        except Exception:
+            logger.exception("Falló la actualización del inventario de Tenable; se reintenta más tarde")
+        _detener.wait(_CHEQUEO_TENABLE)
+
+
 # --- loop principal ---
 
 
 def correr(intervalo: int) -> None:
-    herramientas = threading.Thread(target=_tarea_herramientas, name="herramientas")
-    herramientas.start()
+    settings = get_settings()
+    hilos = [threading.Thread(target=_tarea_herramientas, name="herramientas")]
+    if settings.netskope_enabled:
+        hilos.append(
+            threading.Thread(target=_tarea_alertas, args=(settings.netskope_intervalo_segundos,), name="alertas")
+        )
+    else:
+        logger.info("Integración con Netskope deshabilitada: no se procesan alertas")
+    if settings.tenable_enabled:
+        hilos.append(threading.Thread(target=_tarea_tenable, name="tenable"))
+    for hilo in hilos:
+        hilo.start()
     try:
         if get_settings().jira_enabled:
             _correr_jira(intervalo)
@@ -205,7 +321,8 @@ def correr(intervalo: int) -> None:
             _detener.wait()
     finally:
         _detener.set()
-        herramientas.join()
+        for hilo in hilos:
+            hilo.join()
 
 
 def _correr_jira(intervalo: int) -> None:
@@ -248,10 +365,24 @@ def main() -> None:
     )
     parser.add_argument("--una-vez", action="store_true", help="una sola vuelta de Jira (push + pull) y sale")
     parser.add_argument("--herramientas", action="store_true", help="una revisión de herramientas completa y sale")
+    parser.add_argument("--alertas", action="store_true", help="una vuelta de alertas de Netskope y sale")
+    parser.add_argument("--tenable", action="store_true", help="actualiza el inventario de Tenable ya y sale")
     args = parser.parse_args()
 
     settings = get_settings()
     configure_logging(settings)
+    if args.tenable:
+        try:
+            vuelta_tenable(forzar=True)
+        except TenableError as exc:
+            sys.exit(str(exc))
+        return
+    if args.alertas:
+        try:
+            vuelta_alertas()
+        except NetskopeError as exc:
+            sys.exit(str(exc))
+        return
     if args.herramientas:
         revisar_herramientas(forzar=True)
         return

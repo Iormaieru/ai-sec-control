@@ -57,6 +57,21 @@ def _cleanup_test_estandares() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
+def _cleanup_reglas_alerta() -> Generator[None, None, None]:
+    """La regla de MCP la siembra la migración y no se trunca (como el
+    catálogo); las que crean los tests se borran y la sembrada se restaura."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM reglas_alerta WHERE nombre <> 'Uso de servidores MCP'"))
+        conn.execute(
+            text(
+                "UPDATE reglas_alerta SET consulta = 'app like mcp', severidad = 'ALTA', activa = true, "
+                "notificar_email = true, consultada_hasta = NULL, ultimo_error = NULL WHERE nombre = 'Uso de servidores MCP'"
+            )
+        )
+
+
+@pytest.fixture(autouse=True)
 def _reset_users_and_audit_log() -> Generator[None, None, None]:
     yield
     with engine.begin() as conn:
@@ -66,7 +81,8 @@ def _reset_users_and_audit_log() -> Generator[None, None, None]:
                 "caso_preguntas, caso_respuestas, caso_documentos, herramientas_pentest, "
                 "pentests, pentest_ataques, pentest_ataque_herramientas, cuestionario_invitaciones, "
                 "caso_comentarios, jira_outbox, jira_sync_cursor, herramienta_pasos, distribuciones, "
-                "revision_herramientas RESTART IDENTITY CASCADE"
+                "revision_herramientas, alertas, alerta_eventos, metricas_ia, equipos_tenable, sincronizaciones_tenable, destinatarios_alerta "
+                "RESTART IDENTITY CASCADE"
             )
         )
 
